@@ -7,6 +7,9 @@
 | # | 題名 | 状態 |
 | --- | --- | --- |
 | [0001](0001-cloudflare-typescript.md) | 実行基盤に Cloudflare と TypeScript を使う | 採用 |
+| [0002](0002-ai-division.md) | AI の分担は Jev（判断）と Workers AI（埋め込み） | 採用 |
+| [0003](0003-d1-r2-vectorize.md) | 保存先は D1 / R2 / Vectorize | 採用 |
+| [0004](0004-hono-zod.md) | API は Hono、検証は Zod | 採用 |
 
 ## テンプレート
 
