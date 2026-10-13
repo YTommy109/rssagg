@@ -4,8 +4,10 @@ title: Jev による分類・除外判定の検証
 status: To Do
 assignee: []
 created_date: '2026-10-13 13:10'
+updated_date: '2026-10-13 13:40'
 labels: []
-dependencies: []
+dependencies:
+  - TASK-9
 ordinal: 6000
 ---
 
