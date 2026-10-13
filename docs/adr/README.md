@@ -11,6 +11,7 @@
 | [0003](0003-d1-r2-vectorize.md) | 保存先は D1 / R2 / Vectorize | 採用 |
 | [0004](0004-hono-zod.md) | API は Hono、検証は Zod | 採用 |
 | [0005](0005-cloudflare-access.md) | 認証は Cloudflare Access で自分のメールだけ許可する | 採用 |
+| [0006](0006-htmx-hyperscript-sse.md) | フロントは htmx・hyperscript・SSE | 採用 |
 
 ## テンプレート
 
