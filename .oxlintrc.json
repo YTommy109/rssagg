@@ -1,0 +1,137 @@
+{
+  // Oxlint 方針。behold/site の設定を移植した（ルート共通 + site 固有を 1 ファイルに統合）。
+  //
+  // ルールを個別に無効化するときは **必ず理由を書く**。理由の無い無効化は、
+  // 次にそのルールが必要になったときに「意図して外したのか、たまたま鳴って
+  // 外したのか」が区別できなくなる。
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+
+  // 既定は correctness のみ。ここでは pedantic まで上げる。LLM が書いたコードは
+  // 「動くが不用意」という形の誤りを持ち込みやすく、その多くは correctness では
+  // なく suspicious / perf / pedantic に落ちるため。
+  // style と restriction は入れない。behold での実測では、全カテゴリを有効にすると
+  // 指摘の大半が `no-magic-numbers` / `one-var` / `sort-keys` / `no-async-await` /
+  // `no-null` といった「意図して選んでいる書き方」を否定するものだった。
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error",
+    "pedantic": "error"
+  },
+
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise"],
+
+  "env": {
+    "es2024": true,
+    // Worker のランタイムは Web 標準 API（fetch / URL / crypto / caches …）を
+    // 持つので browser を有効にする。oxlint の env に workers 相当が無いため代替する。
+    "browser": true
+  },
+
+  "ignorePatterns": [
+    "node_modules/**",
+    ".wrangler/**",
+    // wrangler が生成する型定義。手で書く場所ではない。
+    "worker-configuration.d.ts"
+  ],
+
+  "rules": {
+    // 未定義参照の検出。カテゴリには属さないため明示的に有効化する。
+    // .ts / .tsx は下の override で off にする（tsc が担保する）。
+    "eslint/no-undef": "error",
+
+    // 引数の未使用は許す（シグネチャをそろえるために置くことがある）、
+    // catch の束縛も許す、`_` 始まりは意図的な未使用として許す。
+    "eslint/no-unused-vars": [
+      "error",
+      { "args": "none", "caughtErrors": "none", "varsIgnorePattern": "^_" }
+    ],
+
+    // Vitest の `expect(actual, message)` は第 2 引数にメッセージを取れる。
+    // 既定の maxArgs=1 だと、落ちたケースを示すために付けたメッセージが全部エラーになる。
+    "vitest/valid-expect": ["error", { "maxArgs": 2 }],
+    "jest/valid-expect": ["error", { "maxArgs": 2 }],
+
+    // --- サイズ上限 ---
+    // 既定（max-lines 300 / max-lines-per-function 50）は厳しすぎ、テストの
+    // describe コールバックも関数として数えられるため、分割しようのない指摘が大半に
+    // なる。次のとおり緩める。
+    "eslint/max-lines": ["error", 400],
+    "eslint/max-lines-per-function": ["error", 150],
+    "eslint/complexity": ["error", 20],
+    "eslint/max-depth": ["error", 4],
+    // import/max-dependencies は採らない。依存本数は行数と complexity の分割の
+    // 副産物で、独立した上限にする根拠が無い。
+    "import/max-dependencies": "off",
+
+    // 連鎖の途中で値を返し忘れると後続が undefined を受け取る誤りを捕まえる。
+    // 連鎖の最後の then は戻り値を使わないのが普通なので除外する。
+    "promise/always-return": ["error", { "ignoreLastCallback": true }],
+
+    // --- 型情報を使う検査（`oxlint --type-aware` で有効）---
+    // Worker では await し忘れた D1 書き込みがリクエスト終了で黙って消える。
+    // この誤りは tsc でも型情報を使わない lint でも検出できないため、次の 3 つを入れる。
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+
+    // --- 以下は理由つきで無効化する（behold で実測のうえ off にしたもの）---
+    // 新規プロジェクトなので、コードが増えて困らなければ有効化を試す価値がある。
+    // コードベース全体の書き方を変える判断なので、lint 導入には紛れ込ませない。
+    "typescript/prefer-readonly-parameter-types": "off",
+    // @cloudflare/vitest-pool-workers の `env` が deprecated 扱いだが、代替が無い。
+    "typescript/no-deprecated": "off",
+    // 外部 JSON（API・JWKS）を any から絞り込む箇所に集中する。型ガードへ書き換える
+    // 価値はあるが独立した判断。
+    "typescript/no-unsafe-call": "off",
+    "typescript/no-unsafe-member-access": "off",
+    "typescript/no-unsafe-assignment": "off",
+    "typescript/no-unsafe-argument": "off",
+    "typescript/no-unsafe-return": "off",
+    "typescript/no-unsafe-type-assertion": "off",
+    "typescript/no-unnecessary-type-assertion": "off",
+    // hono のルータは `return c.redirect(...)` / `return next()` の形が定型。
+    "typescript/return-await": "off",
+    "typescript/no-confusing-void-expression": "off",
+    "typescript/strict-boolean-expressions": "off",
+    "typescript/no-base-to-string": "off",
+    "typescript/require-array-sort-compare": "off",
+    "typescript/prefer-nullish-coalescing": "off",
+    "typescript/no-misused-spread": "off",
+    "typescript/prefer-includes": "off"
+  },
+
+  "overrides": [
+    {
+      // TypeScript では未定義参照を tsc が捕まえる。oxlint の no-undef は
+      // 型宣言を未定義と誤検知するため外す。
+      "files": ["**/*.ts", "**/*.tsx"],
+      "rules": { "eslint/no-undef": "off" }
+    },
+    {
+      "files": ["test/**"],
+      "plugins": ["vitest"],
+      "env": { "vitest": true },
+      "rules": {
+        // override で vitest プラグインを有効化すると上位のルール設定が
+        // 引き継がれないため、valid-expect はここにも書く。
+        "eslint/max-lines": ["error", 1000],
+        "eslint/max-lines-per-function": "off",
+        "vitest/valid-expect": ["error", { "maxArgs": 2 }],
+        // テーブル駆動の for ループと逐次 await（D1 へ順に INSERT など）が定番。
+        // 並列化すると挿入順が不定になる。
+        "eslint/no-await-in-loop": "off",
+        "vitest/no-conditional-in-test": "off",
+        // テスト内のヘルパはフィクスチャを閉じ込めるために意図して入れ子にする。
+        "unicorn/consistent-function-scoping": "off"
+      }
+    },
+    {
+      // ローカル D1 へサンプルを流し込む開発用スクリプト。Node で走る。
+      "files": ["tools/**"],
+      "plugins": ["node"],
+      "env": { "node": true },
+      "rules": { "eslint/no-await-in-loop": "off" }
+    }
+  ]
+}

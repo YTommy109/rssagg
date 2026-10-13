@@ -1,0 +1,37 @@
+{
+  // Oxfmt 設定。behold の設定を移植した。
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "insertFinalNewline": true,
+  "trailingComma": "all",
+  "semi": false,
+  "singleQuote": true,
+  // JSX 属性は HTML の慣習に合わせてダブルクォートのまま。
+  "jsxSingleQuote": false,
+
+  // import の並びを固定する。LLM が生成するコードは import の位置が呼び出し箇所に
+  // 引きずられて毎回変わり、差分に無関係な行が混ざる。副作用だけを目的とした import
+  // （`import './foo.js'`）を作ると並べ替えで実行順が変わるので、作らない。
+  "sortImports": true,
+
+  "ignorePatterns": [
+    // 対象は JS / TS だけに絞る。oxfmt は Markdown・CSS・HTML・YAML・JSON も整形できて
+    // しまい、既定のまま走らせると backlog のタスクファイルや docs/ まで書き換える。
+    // Markdown は markdownlint-cli2 が持つ。
+    "**/*.md",
+    "**/*.css",
+    "**/*.html",
+    "**/*.yml",
+    "**/*.yaml",
+    "**/*.json",
+    "**/*.jsonc",
+
+    "**/node_modules/**",
+    "**/.wrangler/**",
+    "**/*.min.js",
+    "worker-configuration.d.ts"
+  ]
+}
