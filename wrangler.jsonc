@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "rssagg",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-22",
+
+  // ADR-0005: Access は指定したホスト名しか守らないため、素通りになる
+  // workers.dev と Preview URL は無効にする。
+  "workers_dev": false,
+  "preview_urls": false,
+
+  // Access アプリケーション rssagg の公開ホスト名と同じにする。
+  "routes": [{ "pattern": "rssagg.degino.com", "custom_domain": true }],
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "rssagg",
+      "database_id": "4f04f6ba-8fa2-48d6-8bb4-520f8d8ad6ad",
+      "migrations_dir": "migrations",
+    },
+  ],
+
+  // ACCESS_BYPASS（開発時の JWT 検証の迂回）はここに書かない。本番の vars に入ると
+  // 迂回が有効になり得るため、.dev.vars でのみ指定する（.dev.vars.example を参照）。
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "degino.cloudflareaccess.com",
+    "ACCESS_AUD": "83b135ba85b12b5a56c35372e653f6f281bb5ca1883e932b561280ef69089f50",
+  },
+}

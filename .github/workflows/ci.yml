@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# 連続 push / force-push で古い実行を打ち切る
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # pnpm の版は package.json の packageManager に従う
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: 依存をインストールする
+        run: pnpm install --frozen-lockfile
+
+      # lint と整形ずれは最も安価に落ちるので先に回す。
+      # lint は型情報を使う（--type-aware）。await し忘れの検出に必要。
+      - name: Oxlint を実行する（type-aware）
+        run: pnpm run lint
+
+      - name: Markdown を lint する
+        run: pnpm run lint:md
+
+      - name: Oxfmt の整形ずれを検査する
+        run: pnpm run format:check
+
+      # 型エラーは安価に落ちるのでテストより先に回す
+      - name: 型チェックを実行する
+        run: pnpm run typecheck
+
+      # vitest は @cloudflare/vitest-pool-workers で workerd を起動し、
+      # テスト専用の D1 に migrations/ を適用して実行する
+      - name: テストを実行する
+        run: pnpm test
+
+  # main へのマージで本番へ反映する。手作業では順序を守り続けられないため
+  # CI に固定する。マイグレーションを先に当てないと、新コードの SQL が
+  # カラム不足で失敗する。
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    # 同時実行を 1 本に絞る。並行デプロイでマイグレーションと Worker の
+    # 版が食い違うのを防ぐため、test 側の concurrency とは別グループにする。
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: 依存をインストールする
+        run: pnpm install --frozen-lockfile
+
+      # 取り返しのつかない適用を CI に任せない歯止め。未適用のマイグレーションに
+      # DROP / RENAME / DELETE / TRUNCATE が含まれていたらここで落ちる。
+      # 手動適用すれば未適用でなくなり、次回から通る。
+      - name: 破壊的なマイグレーションが無いか確認する
+        run: scripts/check-destructive-migrations.sh
+
+      - name: D1 マイグレーションを適用する
+        run: pnpm run migrate:remote
+
+      - name: Worker をデプロイする
+        run: pnpm exec wrangler deploy

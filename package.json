@@ -1,5 +1,5 @@
 {
-  "name": "rsstools",
+  "name": "rssagg",
   "private": true,
   "type": "module",
   "engines": { "node": ">=24" },
@@ -8,13 +8,16 @@
     "dev": "wrangler dev",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "check": "pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm test",
+    "check": "pnpm run lint && pnpm run lint:md && pnpm run format:check && pnpm run typecheck && pnpm test",
+    "lint:md": "markdownlint-cli2",
     "lint": "oxlint --type-aware --report-unused-disable-directives",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "cf-typegen": "wrangler types",
     "migrate:diff": "atlas migrate diff --env local",
-    "migrate:local": "wrangler d1 migrations apply DB --local"
+    "migrate:local": "wrangler d1 migrations apply DB --local",
+    "migrate:remote": "wrangler d1 migrations apply rssagg --remote",
+    "migrate:list": "wrangler d1 migrations list rssagg --remote"
   },
   "dependencies": {
     "hono": "^4.13.13",
@@ -23,6 +26,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.23.0",
     "@types/node": "^24.0.0",
+    "markdownlint-cli2": "^0.23.3",
     "oxfmt": "^0.73.0",
     "oxlint": "^1.88.0",
     "oxlint-tsgolint": "^7.0.2004",

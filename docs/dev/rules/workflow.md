@@ -28,6 +28,17 @@ Conventional Commits + 日本語:
 
 type は `feat` / `fix` / `chore` / `docs` / `refactor` / `test` / `ci`。
 
+## マージ方針
+
+PR は**通常の merge（マージコミット）**で取り込む。squash merge と rebase merge は使わない。
+
+- squash と rebase はコミットのハッシュが変わる。ブランチ側のコミットが `main` の祖先でなくなり、`git branch --merged` や `git log main..<ブランチ>` が「未マージ」と誤判定する
+- タスクごとに分けたコミットの単位を、そのまま `main` に残す
+
+マージ済みかどうかを git の履歴で判定できないとき（誤って squash した場合など）は、`gh pr view <番号> --json state,mergedAt` で GitHub に確認する。
+
+GitHub のリポジトリ設定では "Allow squash merging" と "Allow rebase merging" を外し、"Automatically delete head branches" を有効にする。
+
 ## 品質チェック手順
 
 次の順に実行する。軽く落ちるものを先に置く。

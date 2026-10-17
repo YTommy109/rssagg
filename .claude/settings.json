@@ -1,0 +1,69 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "c=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$c\" | tr ';|&' '\\n\\n\\n' | grep -qE '^[[:space:]]*([A-Za-z_][A-Za-z0-9_]*=[^[:space:]]*[[:space:]]+)*(npx|pnpm( exec)?|yarn|bunx)?[[:space:]]*wrangler[[:space:]].*d1[[:space:]]+execute' && ! printf '%s' \"$c\" | grep -qE -- '--local'; then echo 'BLOCK: 本番 D1 への wrangler d1 execute は禁止です。スキーマ変更は schema/schema.sql を直して migrate:diff で migrations/ に生成し、migrate:remote で適用します。ローカル DB なら --local を付けてください' >&2; exit 2; fi"
+          },
+          {
+            "type": "command",
+            "command": "c=$(jq -r '.tool_input.command // empty'); if printf '%s' \"$c\" | tr ';|&(' '\\n\\n\\n\\n' | grep -qE '^[[:space:]]*(rtk[[:space:]]+)?git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+stash([[:space:])]|$)' && ! printf '%s' \"$c\" | grep -qE 'git([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+stash[[:space:]]+(list|show)'; then echo 'BLOCK: git stash は使いません（CLAUDE.md の共通規約）。stash は worktree 間で共有され、別セッションの退避を pop する事故が起きます。退避はスクラッチパッドへコピーしてください' >&2; exit 2; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *backlog/*.md) echo 'BLOCK: Backlog のタスク・ドキュメント・決定事項は backlog CLI 経由で編集してください（直接編集不可）。backlog instructions を参照' >&2; exit 2;; */migrations/*.sql) if [ -f \"$f\" ]; then echo 'BLOCK: 既存のマイグレーションは適用済みの可能性があるため編集しません。変更は新しいマイグレーションとして追加してください（未適用のものを直す必要があるならユーザーに確認）' >&2; exit 2; fi;; esac"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in */node_modules/*) exit 0;; */src/*.ts|*/src/*.tsx|*/test/*.ts) cd \"${CLAUDE_PROJECT_DIR:-.}\" || exit 0; [ -d node_modules ] || { echo 'node_modules 未インストールのため vitest をスキップ: pnpm install' >&2; exit 0; }; out=$(pnpm exec vitest run --silent 2>&1) || { printf '%s\\n' \"$out\" | tail -20 >&2; exit 2; };; esac",
+            "statusMessage": "vitest",
+            "timeout": 120
+          },
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in */node_modules/*) exit 0;; *.ts|*.tsx|*.mjs|*.js) ;; *) exit 0;; esac; cd \"${CLAUDE_PROJECT_DIR:-.}\" || exit 0; [ -x node_modules/.bin/oxlint ] || { echo 'oxlint 未インストールのためスキップ: pnpm install' >&2; exit 0; }; out=$( { pnpm run --silent lint && pnpm run --silent format:check; } 2>&1) || { printf '%s\\n' \"$out\" | tail -20 >&2; exit 2; }",
+            "statusMessage": "oxlint + oxfmt",
+            "timeout": 60
+          },
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.github/workflows/*.yml|*.github/workflows/*.yaml) cd \"${CLAUDE_PROJECT_DIR:-.}\"; command -v actionlint >/dev/null || { echo 'actionlint 未インストール: brew install actionlint' >&2; exit 0; }; { out=$(actionlint 2>&1) || { printf '%s\\n' \"$out\" | tail -20 >&2; exit 2; }; };; esac",
+            "statusMessage": "actionlint"
+          },
+          {
+            "type": "command",
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in */node_modules/*) exit 0;; *.md) cd \"${CLAUDE_PROJECT_DIR:-.}\" || exit 0; [ -x node_modules/.bin/markdownlint-cli2 ] || { echo 'markdownlint-cli2 未インストールのためスキップ: pnpm install' >&2; exit 0; }; out=$(pnpm exec markdownlint-cli2 \"$f\" 2>&1) || { printf '%s\\n' \"$out\" | tail -20 >&2; exit 2; };; esac",
+            "statusMessage": "markdownlint-cli2"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" || exit 0; [ -f pnpm-lock.yaml ] || exit 0; command -v pnpm >/dev/null || { echo 'pnpm が見つからないため pnpm install をスキップしました（mise の Node/pnpm が PATH に無い可能性）'; exit 0; }; [ node_modules/.modules.yaml -nt pnpm-lock.yaml ] && exit 0; if out=$(pnpm install --frozen-lockfile 2>&1); then echo 'pnpm install を実行しました（node_modules が無いか pnpm-lock.yaml より古かったため）'; else echo \"pnpm install に失敗しました。lint・テストのフックはスキップされます: $(printf '%s' \"$out\" | tail -3)\"; fi; exit 0",
+            "statusMessage": "pnpm install (node_modules が無いか古い場合のみ)",
+            "timeout": 180
+          }
+        ]
+      }
+    ]
+  }
+}

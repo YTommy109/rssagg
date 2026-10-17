@@ -1,0 +1,38 @@
+// markdownlint-cli2 設定
+//
+// 方針: 既定ルールを採用し、日本語ドキュメントの実態と衝突するルールだけを
+// 理由付きで無効化する。違反は Markdown 側を直し、ルールを緩めて隠さない。
+{
+  // 手書きで管理している Markdown のみを対象にする。
+  "globs": [
+    "*.md",
+    "docs/**/*.md",
+    // Claude Code が読み込む指示ファイル群（手書き管理）
+    ".claude/commands/*.md",
+    ".claude/skills/**/*.md"
+  ],
+  "ignores": [
+    // backlog CLI が生成・管理するファイル（手で整形しない）
+    "backlog/**",
+    // 依存パッケージ同梱の Markdown。ネストした位置にもあるため "**/" で除外する。
+    "**/node_modules/**",
+    ".claude/worktrees/**"
+  ],
+  "config": {
+    "default": true,
+
+    // --- 無効化するルール（理由付き） ---
+
+    // MD013/line-length: 既定 80 文字上限。日本語ドキュメントでは 1 行の
+    // 情報量が多く実質的に守れない。行幅はエディタの折り返しに委ねる。
+    "MD013": false,
+
+    // MD060/table-column-style: テーブルのパイプ前後の空白揃え。日本語と
+    // 英数字が混在すると桁揃えが崩れ、機械的な整形も効かない。
+    "MD060": false,
+
+    // MD041/first-line-heading: 先頭行を H1 にする。CLAUDE.md はツールが
+    // 読み込む指示ファイルで H1 タイトルを持たない構造のため除外。
+    "MD041": false
+  }
+}
