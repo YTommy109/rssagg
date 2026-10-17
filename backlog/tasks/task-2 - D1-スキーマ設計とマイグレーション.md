@@ -5,9 +5,10 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-13 13:10'
-updated_date: '2026-10-17 12:05'
+updated_date: '2026-10-17 13:39'
 labels: []
 dependencies: []
+type: task
 ordinal: 2000
 ---
 

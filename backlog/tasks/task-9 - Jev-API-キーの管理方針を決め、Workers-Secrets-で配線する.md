@@ -4,10 +4,13 @@ title: Jev API キーの管理方針を決め、Workers Secrets で配線する
 status: To Do
 assignee: []
 created_date: '2026-10-13 13:40'
+updated_date: '2026-10-17 13:39'
 labels: []
 dependencies:
   - TASK-1
-ordinal: 9000
+priority: high
+type: task
+ordinal: 1000
 ---
 
 ## Description

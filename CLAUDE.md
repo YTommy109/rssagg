@@ -44,6 +44,13 @@ Cloudflare Workers + TypeScript + D1 の RSS ツール。構成は [docs/archite
 - **適用済みのマイグレーションは編集しない。** 変更は新しいマイグレーションで行う。手で書いた後は `atlas migrate hash` で `atlas.sum` を更新する
 - `wrangler d1 execute` で本番 D1 を直接叩かない
 
+### Backlog のタスク属性
+
+- 起票時に `--priority`（High / Medium / Low）と `--type` を必ず付ける。type が無いタスクを残さない
+- type の基準: 利用者に見える機能は `feature`、調査して決めるだけで成果物が文書のものは `spike`、
+  実装を含む個別作業は `task`、雛形・CI・依存更新などの保守は `chore`
+- 優先度は「他タスクの依存元になっているもの」を先にし、その次に登録順で決める（`next-task` スキルと同じ基準）
+
 ### 共通
 
 - `git stash` は使わない。退避はスクラッチパッドへコピーする
