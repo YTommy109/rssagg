@@ -24,7 +24,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.23.0",
+    "@cloudflare/vitest-plugin": "^1.4.4",
     "@types/node": "^24.0.0",
     "markdownlint-cli2": "^0.23.3",
     "oxfmt": "^0.73.0",

@@ -49,5 +49,5 @@ test/             複数モジュールをまたぐテスト
 
 - `.oxlintrc.json` のテスト用 override を `**/*.spec.ts` と `test/**` に広げ、`vitest/consistent-test-it` で `it` を強制する
 - vitest の `include` は `src/**/*.spec.ts` と `test/**/*.spec.ts` にする（vitest 基盤は TASK-8 で用意する）
-- tsconfig の `types` に `@cloudflare/vitest-pool-workers/types` があるため、`src/` の本体コードにもテスト用の型が見える。本体がテスト用 API を誤って import しても tsc では気付けない。問題になったら、本体用とテスト用の tsconfig に分ける
+- tsconfig の `types` に `@cloudflare/vitest-plugin/types` があるため、`src/` の本体コードにもテスト用の型が見える。本体がテスト用 API を誤って import しても tsc では気付けない。問題になったら、本体用とテスト用の tsconfig に分ける
 - 依存の向きの機械的な強制（`no-restricted-imports` の override など）は、oxlint で書けるかを確認してから別途決める

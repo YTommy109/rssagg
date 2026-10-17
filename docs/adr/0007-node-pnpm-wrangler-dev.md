@@ -10,7 +10,7 @@
 ## 決定
 
 - アプリはローカルでも `wrangler dev`（workerd と D1 のローカル版）で動かす
-- テストは vitest と `@cloudflare/vitest-pool-workers` で、workerd 内で実行する
+- テストは vitest と `@cloudflare/vitest-plugin` で、workerd 内で実行する
 - ツールを動かす Node.js は 24 系を使う
 - パッケージ管理は pnpm を使う
 - Node・pnpm・Atlas の版は mise（`mise.toml`）でまとめて固定する
@@ -20,7 +20,7 @@
 
 実行するコードは、ローカルでも本番でも workerd 上で動く。Node・Bun・Deno は、その周辺のツールを動かす側の選択にすぎない。
 
-- **Bun / Deno**: 自分のランタイムで Worker を動かすと、D1・R2 などのバインディングが無く、本番の workerd と挙動が変わる。`wrangler` と `vitest-pool-workers` は Node 前提で作られており、載せ替えると公式の情報から外れる。採らない
+- **Bun / Deno**: 自分のランタイムで Worker を動かすと、D1・R2 などのバインディングが無く、本番の workerd と挙動が変わる。`wrangler` と `vitest-plugin` は Node 前提で作られており、載せ替えると公式の情報から外れる。採らない
 - **npm**: 標準で追加の導入が要らないが、プロジェクトごとにパッケージ本体を重複して持つ
 - **pnpm**: パッケージ本体をローカルの1か所のストアで共有し、プロジェクトをまたいだディスク使用量を抑えられる。複数プロジェクトを並行して扱うため、これを重視して採用する
 - **タスクランナーを mise tasks にする案**: 採らない。文書・CI・hooks が `pnpm run` 前提で、CI に mise の導入も要る。JS 以外のツールを依存つきでつなぐ必要が出たら見直す

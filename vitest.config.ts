@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 
-import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-pool-workers'
+import { cloudflareTest, readD1Migrations } from '@cloudflare/vitest-plugin'
 import { defineConfig } from 'vitest/config'
 
 const WRANGLER_CONFIG = path.join(import.meta.dirname, 'wrangler.jsonc')
@@ -15,7 +15,6 @@ export default defineConfig({
       const migrations = existsSync(MIGRATIONS_DIR) ? await readD1Migrations(MIGRATIONS_DIR) : []
 
       return {
-        singleWorker: true,
         // wrangler.jsonc は TASK-1 で作る。無い間は設定なしで起動し、pnpm test が設定読み込みで落ちないようにする。
         ...(existsSync(WRANGLER_CONFIG) ? { wrangler: { configPath: './wrangler.jsonc' } } : {}),
         miniflare: {
