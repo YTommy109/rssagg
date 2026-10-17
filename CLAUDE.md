@@ -35,7 +35,7 @@ Cloudflare Workers + TypeScript + D1 の RSS ツール。構成は [docs/archite
 - 設定は `.oxlintrc.json` と `.oxfmtrc.json` が単一の情報源。oxfmt は JS/TS だけを整形する（Markdown は対象外）
 - カテゴリは correctness / suspicious / perf / pedantic を error にし、style と restriction は入れない
 - **ルールを個別に無効化するときは、理由をコメントに書く**。理由の無い無効化は、後で「意図して外したのか」が区別できなくなる
-- `npm run lint` は `oxlint --type-aware` で走らせる。Worker では await し忘れた D1 書き込みがリクエスト終了で黙って消えるため、`no-floating-promises` / `no-misused-promises` / `await-thenable` を error にしている。これは tsc でも型情報なしの lint でも検出できない
+- `pnpm run lint` は `oxlint --type-aware` で走らせる。Worker では await し忘れた D1 書き込みがリクエスト終了で黙って消えるため、`no-floating-promises` / `no-misused-promises` / `await-thenable` を error にしている。これは tsc でも型情報なしの lint でも検出できない
 
 ### D1 / マイグレーション
 
