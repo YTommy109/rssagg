@@ -1,11 +1,11 @@
 ---
 id: TASK-8
 title: behold から CI・スクリプト・hooks を移植
-status: In Progress
+status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-13 13:25'
-updated_date: '2026-10-17 11:16'
+updated_date: '2026-10-17 11:18'
 labels:
   - porting
 dependencies: []
@@ -20,7 +20,7 @@ behold/site から移植する、アプリ本体に依存しない環境構築�
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 CI が lint・format・typecheck・test を通す
+- [x] #1 CI が lint・format・typecheck・test を通す
 - [x] #2 破壊的マイグレーションのガードが動く
 - [x] #3 Access JWT 検証のテスト基盤がある
 - [x] #4 behold の .markdownlint-cli2.jsonc を複製し、globs と ignores をこのリポジトリ用に調整している（TASK-219 などの behold 固有の参照は除く。backlog/** は除外し、無効化する MD013・MD060・MD041 は理由を残す）
@@ -46,4 +46,12 @@ behold/site から移植する、アプリ本体に依存しない環境構築�
 TASK-1 完了に伴い lint/format/typecheck/test がローカルで通る状態になった（AC#1 は GitHub Actions 上の実行が未確認）。(1) ci.yml・migrate.yml・破壊的マイグレーションのガード、(3) vitest 基盤、markdownlint（違反ゼロ、lint:md を CI と check に追加）は実装済み。残り: .claude/settings.json の hooks（ユーザー承認待ち）、AC#5 の Claude hooks（md 編集時）。
 
 hooks（.claude/settings.json）をユーザー承認のうえ設定。PreToolUse（d1 execute は --local 無しでブロック、git stash、既存 migrations/*.sql の編集、backlog/**/*.md の直接編集）、PostToolUse（vitest、oxlint+oxfmt、actionlint、markdownlint-cli2）、SessionStart（pnpm install）。擬似入力 15 件で許可/拒否を確認し、実機では PreToolUse（backlog への Write）と PostToolUse（違反 md で MD012・exit 2）が効くことを確認。AC#2: 偽の pnpm と偽 migrations で DROP/RENAME/DELETE FROM/TRUNCATE を検出（exit 1）、コメント行のみは通過。AC#6: 一時的な src/probe.spec.ts と test/access.spec.ts が両方実行（2 ファイル 5 件通過、一時 spec は削除）。AC#1 は GitHub Actions 上の実行が未確認のため未チェック。注意: main への push は deploy ジョブを起動するため、database_id が仮値のうちはブランチ/PR で CI を回すこと。
+
+PR #1 の GitHub Actions で test ジョブが全ステップ成功（lint→lint:md→format:check→typecheck→test）、deploy は PR のため skipping（run 39028162597）。
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+behold から CI（ci.yml・手動 migrate.yml）、破壊的マイグレーションのガード、vitest 基盤（src/test 両方の *.spec.ts）、Access JWT のテスト基盤、markdownlint（CI・pnpm script・hooks）、Claude の hooks を移植した。hooks はユーザー承認のうえ設定し、実機でブロックと lint の動作を確認。CI は PR #1 で通過。フォローアップ: @cloudflare/vitest-pool-workers の改名警告、deploy ジョブは database_id などの仮値が本物になるまで main に入れない。
+<!-- SECTION:FINAL_SUMMARY:END -->
