@@ -4,7 +4,7 @@ title: behold から CI・スクリプト・hooks を移植
 status: To Do
 assignee: []
 created_date: '2026-10-13 13:25'
-updated_date: '2026-10-13 13:52'
+updated_date: '2026-10-17 08:41'
 labels:
   - porting
 dependencies: []
@@ -24,4 +24,11 @@ behold/site から移植する、アプリ本体に依存しない環境構築�
 - [ ] #3 Access JWT 検証のテスト基盤がある
 - [ ] #4 behold の .markdownlint-cli2.jsonc を複製し、globs と ignores をこのリポジトリ用に調整している（TASK-219 などの behold 固有の参照は除く。backlog/** は除外し、無効化する MD013・MD060・MD041 は理由を残す）
 - [ ] #5 markdownlint-cli2 が npm script・CI・Claude の hooks（md 編集時）から実行され、既存の Markdown が違反ゼロで通る
+- [ ] #6 vitest.config.ts の include が src/**/*.spec.ts と test/**/*.spec.ts を拾い、本体の隣の単体テストと test/ の結合テストの両方が実行される（ADR-0008）
 <!-- AC:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+テストの拡張子は *.spec.ts、関数は it に統一する（ADR-0008）。.oxlintrc.json のテスト用 override と vitest/consistent-test-it は設定済み。vitest.config.ts の include だけが残っている。
+<!-- SECTION:NOTES:END -->
