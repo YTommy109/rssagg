@@ -117,10 +117,13 @@
       "rules": { "eslint/no-undef": "off" }
     },
     {
-      "files": ["test/**"],
+      // 単体テストは本体の隣（*.spec.ts）、複数モジュールをまたぐテストは test/ に置く（ADR-0008）。
+      "files": ["**/*.spec.ts", "test/**"],
       "plugins": ["vitest"],
       "env": { "vitest": true },
       "rules": {
+        // テストは `it` に統一する（`test` と混在させない）。
+        "vitest/consistent-test-it": ["error", { "fn": "it", "withinDescribe": "it" }],
         // override で vitest プラグインを有効化すると上位のルール設定が
         // 引き継がれないため、valid-expect はここにも書く。
         "eslint/max-lines": ["error", 400],

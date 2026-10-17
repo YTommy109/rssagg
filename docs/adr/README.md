@@ -13,6 +13,7 @@
 | [0005](0005-cloudflare-access.md) | 認証は Cloudflare Access で自分のメールだけ許可する | 採用 |
 | [0006](0006-htmx-hyperscript-sse.md) | フロントは htmx・hyperscript・SSE | 採用 |
 | [0007](0007-node-pnpm-wrangler-dev.md) | ローカル開発は wrangler dev と Node、パッケージ管理は pnpm | 採用 |
+| [0008](0008-src-layout.md) | src の構成は層別で、単体テストは本体の隣に置く | 採用 |
 
 ## テンプレート
 
