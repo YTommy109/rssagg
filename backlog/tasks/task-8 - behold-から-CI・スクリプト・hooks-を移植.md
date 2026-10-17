@@ -1,10 +1,11 @@
 ---
 id: TASK-8
 title: behold から CI・スクリプト・hooks を移植
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@claude'
 created_date: '2026-10-13 13:25'
-updated_date: '2026-10-17 08:42'
+updated_date: '2026-10-17 08:56'
 labels:
   - porting
 dependencies: []
@@ -27,8 +28,20 @@ behold/site から移植する、アプリ本体に依存しない環境構築�
 - [ ] #6 vitest.config.ts の include が src/**/*.spec.ts と test/**/*.spec.ts を拾い、本体の隣の単体テストと test/ の結合テストの両方が実行される（ADR-0008）
 <!-- AC:END -->
 
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. [A] .github/workflows/ci.yml・migrate.yml と scripts/check-destructive-migrations.sh・scripts/lib/d1-pending-migrations.sh を behold から移植（Swift 系・TASK 参照・staging は除く、D1 名は rsstools、npm→pnpm）。package.json に migrate:remote / migrate:list を追加
+2. [B] vitest.config.ts（include=src/**/*.spec.ts と test/**/*.spec.ts）・test/setup.ts・test/access-helpers.ts を移植。.markdownlint-cli2.jsonc を調整して複製し、pnpm run lint:md を追加、既存 Markdown の違反をゼロにする
+3. CI に markdownlint を組み込む
+4. hooks（.claude/settings.json）は承認が必要なため、案を提示してユーザー承認後に設定
+5. 受け入れ条件を実コマンドで検証してから完了処理
+<!-- SECTION:PLAN:END -->
+
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
 テストの拡張子は *.spec.ts、関数は it に統一する（ADR-0008）。.oxlintrc.json のテスト用 override と vitest/consistent-test-it は設定済み。vitest.config.ts の include だけが残っている。
+
+TASK-1 完了に伴い lint/format/typecheck/test がローカルで通る状態になった（AC#1 は GitHub Actions 上の実行が未確認）。(1) ci.yml・migrate.yml・破壊的マイグレーションのガード、(3) vitest 基盤、markdownlint（違反ゼロ、lint:md を CI と check に追加）は実装済み。残り: .claude/settings.json の hooks（ユーザー承認待ち）、AC#5 の Claude hooks（md 編集時）。
 <!-- SECTION:NOTES:END -->

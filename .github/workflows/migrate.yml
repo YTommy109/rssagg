@@ -1,0 +1,73 @@
+name: Migrate
+
+# D1 マイグレーションだけを手動で適用する。
+#
+# ci.yml の deploy は、未適用のマイグレーションに DROP / RENAME / DELETE /
+# TRUNCATE が含まれていると check-destructive-migrations.sh で止まる。その解除は
+# 「内容を確認して手動で適用する」ことだが、ローカルからの wrangler には認証が要り、
+# 非対話シェルでは OAuth ログインを開けずに失敗する。
+#
+# このワークフローは CI 側の CLOUDFLARE_API_TOKEN でその手動適用を代行する。
+# **手動トリガーであること自体が「人が内容を確認した」証跡**であり、
+# ci.yml 側の歯止めには手を入れていない（自動適用は引き続き止まる）。
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: plan は未適用の一覧を出すだけ / apply が実際に適用する
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+        default: plan
+      confirm:
+        description: apply するときのみ、データベース名 rssagg を入力する
+        required: false
+        type: string
+
+# デプロイと同じグループにする。マイグレーションと Worker のデプロイが同時に
+# 走ると、スキーマと配信中のコードの版が食い違うため。
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: pnpm
+
+      - name: 依存をインストールする
+        run: pnpm install --frozen-lockfile
+
+      # inputs は式で直接展開せず env 経由で渡す
+      # （入力値がそのままシェルに入るとスクリプトインジェクションになるため）。
+      - name: 適用を確認する
+        if: inputs.mode == 'apply'
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          if [ "$CONFIRM" != "rssagg" ]; then
+            echo "適用するには confirm に rssagg を入力してください。" >&2
+            exit 1
+          fi
+
+      # apply と同じコマンドで一覧を出す。plan で見たものと当たるものが
+      # ずれないよう、情報源を分けない。
+      - name: 未適用のマイグレーションを一覧する
+        run: pnpm run migrate:list
+
+      - name: マイグレーションを適用する
+        if: inputs.mode == 'apply'
+        run: pnpm run migrate:remote
