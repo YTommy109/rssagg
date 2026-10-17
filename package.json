@@ -8,6 +8,7 @@
     "dev": "wrangler dev",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
+    "check": "pnpm run lint && pnpm run format:check && pnpm run typecheck && pnpm test",
     "lint": "oxlint --type-aware --report-unused-disable-directives",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
