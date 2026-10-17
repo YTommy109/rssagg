@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@claude'
 created_date: '2026-10-13 13:25'
-updated_date: '2026-10-17 08:56'
+updated_date: '2026-10-17 11:16'
 labels:
   - porting
 dependencies: []
@@ -21,11 +21,11 @@ behold/site から移植する、アプリ本体に依存しない環境構築�
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 CI が lint・format・typecheck・test を通す
-- [ ] #2 破壊的マイグレーションのガードが動く
-- [ ] #3 Access JWT 検証のテスト基盤がある
-- [ ] #4 behold の .markdownlint-cli2.jsonc を複製し、globs と ignores をこのリポジトリ用に調整している（TASK-219 などの behold 固有の参照は除く。backlog/** は除外し、無効化する MD013・MD060・MD041 は理由を残す）
-- [ ] #5 markdownlint-cli2 が pnpm script・CI・Claude の hooks（md 編集時）から実行され、既存の Markdown が違反ゼロで通る
-- [ ] #6 vitest.config.ts の include が src/**/*.spec.ts と test/**/*.spec.ts を拾い、本体の隣の単体テストと test/ の結合テストの両方が実行される（ADR-0008）
+- [x] #2 破壊的マイグレーションのガードが動く
+- [x] #3 Access JWT 検証のテスト基盤がある
+- [x] #4 behold の .markdownlint-cli2.jsonc を複製し、globs と ignores をこのリポジトリ用に調整している（TASK-219 などの behold 固有の参照は除く。backlog/** は除外し、無効化する MD013・MD060・MD041 は理由を残す）
+- [x] #5 markdownlint-cli2 が pnpm script・CI・Claude の hooks（md 編集時）から実行され、既存の Markdown が違反ゼロで通る
+- [x] #6 vitest.config.ts の include が src/**/*.spec.ts と test/**/*.spec.ts を拾い、本体の隣の単体テストと test/ の結合テストの両方が実行される（ADR-0008）
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -44,4 +44,6 @@ behold/site から移植する、アプリ本体に依存しない環境構築�
 テストの拡張子は *.spec.ts、関数は it に統一する（ADR-0008）。.oxlintrc.json のテスト用 override と vitest/consistent-test-it は設定済み。vitest.config.ts の include だけが残っている。
 
 TASK-1 完了に伴い lint/format/typecheck/test がローカルで通る状態になった（AC#1 は GitHub Actions 上の実行が未確認）。(1) ci.yml・migrate.yml・破壊的マイグレーションのガード、(3) vitest 基盤、markdownlint（違反ゼロ、lint:md を CI と check に追加）は実装済み。残り: .claude/settings.json の hooks（ユーザー承認待ち）、AC#5 の Claude hooks（md 編集時）。
+
+hooks（.claude/settings.json）をユーザー承認のうえ設定。PreToolUse（d1 execute は --local 無しでブロック、git stash、既存 migrations/*.sql の編集、backlog/**/*.md の直接編集）、PostToolUse（vitest、oxlint+oxfmt、actionlint、markdownlint-cli2）、SessionStart（pnpm install）。擬似入力 15 件で許可/拒否を確認し、実機では PreToolUse（backlog への Write）と PostToolUse（違反 md で MD012・exit 2）が効くことを確認。AC#2: 偽の pnpm と偽 migrations で DROP/RENAME/DELETE FROM/TRUNCATE を検出（exit 1）、コメント行のみは通過。AC#6: 一時的な src/probe.spec.ts と test/access.spec.ts が両方実行（2 ファイル 5 件通過、一時 spec は削除）。AC#1 は GitHub Actions 上の実行が未確認のため未チェック。注意: main への push は deploy ジョブを起動するため、database_id が仮値のうちはブランチ/PR で CI を回すこと。
 <!-- SECTION:NOTES:END -->
