@@ -11,8 +11,9 @@
 
 - アプリはローカルでも `wrangler dev`（workerd と D1 のローカル版）で動かす
 - テストは vitest と `@cloudflare/vitest-pool-workers` で、workerd 内で実行する
-- ツールを動かす Node.js は 24 系を使い、版は `.node-version` で固定する
+- ツールを動かす Node.js は 24 系を使う
 - パッケージ管理は pnpm を使う
+- Node と pnpm の版は mise（`mise.toml`）でまとめて固定する
 
 ## 理由・検討した代替案
 
@@ -21,6 +22,8 @@
 - **Bun / Deno**: 自分のランタイムで Worker を動かすと、D1・R2 などのバインディングが無く、本番の workerd と挙動が変わる。`wrangler` と `vitest-pool-workers` は Node 前提で作られており、載せ替えると公式の情報から外れる。採らない
 - **npm**: 標準で追加の導入が要らないが、プロジェクトごとにパッケージ本体を重複して持つ
 - **pnpm**: パッケージ本体をローカルの1か所のストアで共有し、プロジェクトをまたいだディスク使用量を抑えられる。複数プロジェクトを並行して扱うため、これを重視して採用する
+
+- **版の固定に `.node-version` を使う案**: 採らない。volta 経由の `pnpm` が、シェルの `node`（24）とは別の Node 18 で動き、wrangler と oxlint が起動しなかった。mise なら Node と pnpm を同じ設定で固定でき、この食い違いが起きない
 
 ## 影響
 
