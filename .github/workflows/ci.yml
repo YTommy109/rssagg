@@ -43,7 +43,7 @@ jobs:
       - name: 型チェックを実行する
         run: pnpm run typecheck
 
-      # vitest は @cloudflare/vitest-pool-workers で workerd を起動し、
+      # vitest は @cloudflare/vitest-plugin で workerd を起動し、
       # テスト専用の D1 に migrations/ を適用して実行する
       - name: テストを実行する
         run: pnpm test

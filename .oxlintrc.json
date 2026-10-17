@@ -95,12 +95,11 @@
     "typescript/prefer-nullish-coalescing": "error",
     "typescript/no-misused-spread": "error",
     "typescript/prefer-includes": "error",
+    "typescript/no-deprecated": "error",
 
     // --- 以下は理由つきで無効化する ---
     // 全引数を readonly にする書き方の強制は、コード全体の流儀を変える判断で割に合わない。
     "typescript/prefer-readonly-parameter-types": "off",
-    // @cloudflare/vitest-pool-workers の `env` が deprecated 扱いだが、代替が無い。
-    "typescript/no-deprecated": "off",
     // hono のルータは `return c.redirect(...)` / `return next()` の形が定型。
     "typescript/return-await": "off",
     "typescript/no-confusing-void-expression": "off",
