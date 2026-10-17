@@ -4,9 +4,12 @@ title: 定期クロール（Cron 1h）
 status: To Do
 assignee: []
 created_date: '2026-10-13 13:10'
+updated_date: '2026-10-17 13:39'
 labels: []
 dependencies: []
-ordinal: 4000
+priority: high
+type: feature
+ordinal: 3000
 ---
 
 ## Description

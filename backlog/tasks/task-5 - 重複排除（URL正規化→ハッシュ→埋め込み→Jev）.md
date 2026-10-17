@@ -4,10 +4,12 @@ title: 重複排除（URL正規化→ハッシュ→埋め込み→Jev）
 status: To Do
 assignee: []
 created_date: '2026-10-13 13:10'
-updated_date: '2026-10-13 13:40'
+updated_date: '2026-10-17 13:39'
 labels: []
 dependencies:
   - TASK-9
+priority: medium
+type: feature
 ordinal: 5000
 ---
 

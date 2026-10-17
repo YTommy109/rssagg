@@ -5,10 +5,11 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-13 13:25'
-updated_date: '2026-10-17 11:18'
+updated_date: '2026-10-17 13:39'
 labels:
   - porting
 dependencies: []
+type: chore
 ordinal: 8000
 ---
 
