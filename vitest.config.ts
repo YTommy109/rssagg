@@ -19,10 +19,14 @@ export default defineConfig({
         ...(existsSync(WRANGLER_CONFIG) ? { wrangler: { configPath: './wrangler.jsonc' } } : {}),
         miniflare: {
           // .dev.vars は gitignore 対象なので、テスト用の認証情報はここで固定する。
+          // 開発者の .dev.vars も読み込まれるため（ACCESS_BYPASS=true が入っていると
+          // 401 を期待するテストが通らなくなる）、.dev.vars に書く値はここで必ず上書きする。
           bindings: {
             TEST_MIGRATIONS: migrations,
             ACCESS_TEAM_DOMAIN: 'test-team.cloudflareaccess.com',
             ACCESS_AUD: 'test-aud',
+            ACCESS_BYPASS: '',
+            JEV_API_KEY: 'test-jev-api-key',
           },
         },
       }

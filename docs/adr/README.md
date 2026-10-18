@@ -15,6 +15,7 @@
 | [0007](0007-node-pnpm-wrangler-dev.md) | ローカル開発は wrangler dev と Node、パッケージ管理は pnpm | 採用 |
 | [0008](0008-src-layout.md) | src の構成は層別で、単体テストは本体の隣に置く | 採用 |
 | [0009](0009-workers-secrets.md) | Jev の API キーは Workers Secrets に置く | 採用 |
+| [0010](0010-htmx-from-cdn.md) | htmx は CDN から、バージョンを固定して SRI つきで読み込む | 採用 |
 
 ## テンプレート
 

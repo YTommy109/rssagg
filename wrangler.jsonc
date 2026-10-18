@@ -12,6 +12,13 @@
   // Access アプリケーション rssagg の公開ホスト名と同じにする。
   "routes": [{ "pattern": "rssagg.degino.com", "custom_domain": true }],
 
+  // routes があると wrangler dev がリクエストの URL のホスト名を本番のドメインに書き換え、
+  // ACCESS_BYPASS の迂回（宛先がローカルホストのときだけ効く）が一度も効かなくなる。
+  // ローカルでは localhost を宛先にそろえる。ポートまで書くのは、Worker が見る URL を
+  // ブラウザの URL（http://localhost:8787/...）と一致させ、絶対 URL を組み立てても食い違わないため。
+  // この値は wrangler dev --remote の zone 解決にも使われるが、remote は使わない（ADR-0007）。
+  "dev": { "host": "localhost:8787" },
+
   "d1_databases": [
     {
       "binding": "DB",
