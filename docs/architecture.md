@@ -26,6 +26,7 @@ flowchart LR
 | クロールの分散 | 不要（Cron 1 本で並列数を絞る） | 想定 |
 | データベース | D1（[ADR-0003](adr/0003-d1-r2-vectorize.md)） | 採用 |
 | 判断（分類・除外・重複確認） | Jev（[ADR-0002](adr/0002-ai-division.md)） | 採用 |
+| シークレット（Jev の API キー） | Workers Secrets（[ADR-0009](adr/0009-workers-secrets.md)、登録手順は [dev/secrets.md](dev/secrets.md)） | 採用 |
 | 埋め込み | Workers AI + Vectorize | 採用 |
 | アーカイブ保存 | R2（形式は未決） | 採用（形式のみ未決） |
 
