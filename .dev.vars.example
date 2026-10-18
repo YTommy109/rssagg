@@ -2,3 +2,7 @@
 # wrangler dev でのみ Access JWT の検証を迂回する。本番では設定しないこと。
 # 迂回は localhost / 127.0.0.1 宛てのリクエストにしか効かない。
 ACCESS_BYPASS=true
+
+# Jev（TypeSafe）の API キー。実値は .dev.vars にだけ書く。本番は wrangler secret put で登録する
+# （手順は docs/dev/secrets.md）。
+JEV_API_KEY=replace-with-your-jev-api-key
