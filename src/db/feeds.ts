@@ -3,10 +3,12 @@ export type Feed = {
   id: number
   url: string
   title: string | null
+  etag: string | null
+  last_modified: string | null
   created_at: number
 }
 
-const COLUMNS = 'id, url, title, created_at'
+const COLUMNS = 'id, url, title, etag, last_modified, created_at'
 
 /**
  * フィードを登録する。同じ URL が既にあれば登録せず undefined を返す。

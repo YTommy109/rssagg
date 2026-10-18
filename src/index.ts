@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 
+import { crawlAll } from './crawl/crawl'
 import type { AppEnv } from './env'
 import { accessMiddleware } from './middleware/access-middleware'
 import { feedsRoute } from './routes/feeds'
@@ -18,4 +19,10 @@ app.route('/', homeRoute)
 app.route('/feeds', feedsRoute)
 app.route('/settings/feeds', feedsPageRoute)
 
-export default app
+export default {
+  fetch: app.fetch,
+  // wrangler.jsonc の triggers.crons（毎時）で起動する。
+  async scheduled(_controller, env) {
+    await crawlAll(env.DB, Math.floor(Date.now() / 1000))
+  },
+} satisfies ExportedHandler<Env>

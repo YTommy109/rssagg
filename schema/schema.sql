@@ -5,6 +5,9 @@ CREATE TABLE feeds (
   id INTEGER PRIMARY KEY,
   url TEXT NOT NULL UNIQUE,
   title TEXT,
+  -- 条件付き GET 用。次回の取得で If-None-Match / If-Modified-Since に使い、更新が無ければ本文を取り直さない。
+  etag TEXT,
+  last_modified TEXT,
   created_at INTEGER NOT NULL
 );
 
