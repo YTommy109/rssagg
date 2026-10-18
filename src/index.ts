@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import type { AppEnv } from './env'
 import { accessMiddleware } from './middleware/access-middleware'
 import { feedsRoute } from './routes/feeds'
+import { homeRoute } from './routes/home'
 
 const app = new Hono<AppEnv>()
 
@@ -12,6 +13,7 @@ const app = new Hono<AppEnv>()
 app.use('*', accessMiddleware)
 
 app.get('/healthz', (c) => c.json({ ok: true }))
+app.route('/', homeRoute)
 app.route('/feeds', feedsRoute)
 
 export default app
