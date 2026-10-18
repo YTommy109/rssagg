@@ -4,9 +4,10 @@ title: 定期クロール（Cron 1h）
 status: To Do
 assignee: []
 created_date: '2026-10-13 13:10'
-updated_date: '2026-10-17 13:39'
+updated_date: '2026-10-18 13:13'
 labels: []
-dependencies: []
+dependencies:
+  - TASK-3
 priority: high
 type: feature
 ordinal: 3000
@@ -21,4 +22,6 @@ ordinal: 3000
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [ ] #1 更新のないフィードは本文を再取得しない
+- [ ] #2 手動で実行すると（wrangler dev --test-scheduled）、登録済みフィードの記事が articles に保存される
+- [ ] #3 取得に失敗したフィードがあっても、ほかのフィードの取得は続く
 <!-- AC:END -->
