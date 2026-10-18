@@ -14,7 +14,7 @@ describe('画面の土台', () => {
   })
   afterEach(removeAccessKeys)
 
-  it('/ は doctype つきの HTML で、版を固定した htmx を SRI つきで読み込み、断片の部品を持つ', async () => {
+  it('/ は doctype つきの HTML で、版を固定した htmx を SRI つきで読み込み、フィード管理へのリンクを持つ', async () => {
     const res = await exports.default.fetch(`${BASE}/`, { headers })
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toContain('text/html')
@@ -26,23 +26,14 @@ describe('画面の土台', () => {
     expect(body).toMatch(
       /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/htmx\.org@\d+\.\d+\.\d+\/dist\/htmx\.min\.js" integrity="sha384-[A-Za-z0-9+/]{64}" crossorigin="anonymous"/u,
     )
-    expect(body).toContain('hx-get="/ui/status"')
+    expect(body).toContain('href="/settings/feeds"')
+    // 409/422 を差し替えつつ error にする設定が落ちると、失敗の理由が出なくなるか、失敗なのに入力欄が消える。
+    expect(body).toContain('name="htmx-config"')
+    expect(body).toContain('409|422&quot;,&quot;swap&quot;:true,&quot;error&quot;:true')
   })
 
-  it('断片はレイアウトを含まない', async () => {
-    const res = await exports.default.fetch(`${BASE}/ui/status`, { headers })
-    expect(res.status).toBe(200)
-    const fragment = await res.text()
-    expect(fragment).toContain('ok')
-    expect(fragment).not.toContain('<html')
-  })
-
-  it('JWT が無ければ / も断片も 401', async () => {
-    const statuses = await Promise.all(
-      ['/', '/ui/status'].map(
-        async (path) => (await exports.default.fetch(`${BASE}${path}`)).status,
-      ),
-    )
-    expect(statuses).toStrictEqual([401, 401])
+  it('JWT が無ければ 401', async () => {
+    const res = await exports.default.fetch(`${BASE}/`)
+    expect(res.status).toBe(401)
   })
 })
