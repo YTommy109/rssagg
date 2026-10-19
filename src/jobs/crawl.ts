@@ -1,5 +1,6 @@
 import { insertArticleStatements } from '../db/articles'
 import { type Feed, listFeeds, updateFeedCacheStatement } from '../db/feeds'
+import { feedUrlSchema } from '../domain/feed-input'
 import { decodeFeedBytes, parseFeed } from '../domain/feed-parse'
 
 /** 同時に取得するフィード数。Workers の同時接続数（6）に収める。 */
@@ -10,6 +11,37 @@ export const MAX_FEED_BYTES = 5 * 1024 * 1024
 
 /** 1 フィードの取得を打ち切る時間。遅いフィード 1 つで cron 全体が詰まらないようにする。 */
 const FETCH_TIMEOUT_MS = 15_000
+
+/** 追うリダイレクトの回数。超えたら失敗にする。 */
+const MAX_REDIRECTS = 5
+
+/** 移動先を解決して feedUrlSchema で検査する。相対 Location は現在の URL を基準にする。通らなければ null。 */
+function resolveRedirect(location: string, base: string): string | null {
+  if (!URL.canParse(location, base)) return null
+  const parsed = feedUrlSchema.safeParse(new URL(location, base).href)
+  return parsed.success ? parsed.data : null
+}
+
+/**
+ * リダイレクトを自前で追って取得する。fetch 任せだと、登録時に feedUrlSchema で検証した
+ * URL と実際の取得先が食い違い、移動先が http/https 以外や認証情報つきでも検査されない。
+ */
+async function fetchFollowing(url: string, init: RequestInit): Promise<Response> {
+  let current = url
+  for (let hops = 0; ; hops++) {
+    // oxlint-disable-next-line no-await-in-loop -- 移動先は直前のレスポンスで決まるため、順に追う
+    const res = await fetch(current, { ...init, redirect: 'manual' })
+    const location = res.headers.get('Location')
+    // 304 は Location があっても移動ではない。
+    if (res.status < 300 || res.status >= 400 || res.status === 304 || location === null) return res
+    // oxlint-disable-next-line no-await-in-loop -- 移動先に進むので、読まない本文は捨てる
+    await res.body?.cancel()
+    if (hops >= MAX_REDIRECTS) throw new Error(`${url}: too many redirects`)
+    const next = resolveRedirect(location, current)
+    if (next === null) throw new Error(`${url}: invalid redirect to ${location}`)
+    current = next
+  }
+}
 
 /**
  * 本文を上限付きで読む。Content-Length が上限超なら読まずに打ち切り、
@@ -46,7 +78,10 @@ export async function crawlFeed(db: D1Database, feed: Feed, now: number): Promis
   if (feed.etag !== null) headers.set('If-None-Match', feed.etag)
   if (feed.last_modified !== null) headers.set('If-Modified-Since', feed.last_modified)
 
-  const res = await fetch(feed.url, { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
+  const res = await fetchFollowing(feed.url, {
+    headers,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  })
   if (res.status === 304) return
   if (!res.ok) throw new Error(`${feed.url}: HTTP ${res.status}`)
 
