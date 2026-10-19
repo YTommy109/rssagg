@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { decodeFeedBytes, parseFeed } from './feed-parse'
+import { decodeFeedBytes, normalizeUrl, parseFeed } from './feed-parse'
 
 const RSS = `<?xml version="1.0"?><rss version="2.0"><channel><title>Blog</title>
 <item><title>A</title><link>https://a.test/1</link><guid>g1</guid><pubDate>Wed, 01 Jan 2025 00:00:00 GMT</pubDate><description>&lt;p&gt;hello&lt;/p&gt;</description></item>
@@ -52,5 +52,21 @@ describe('decodeFeedBytes', () => {
     const utf8 = new TextEncoder().encode('あ')
     expect(decodeFeedBytes(utf8, 'text/xml; charset=nope')).toBe('あ')
     expect(decodeFeedBytes(utf8, null)).toBe('あ')
+  })
+})
+
+describe('normalizeUrl', () => {
+  it('fragment と計測用クエリだけを落とし、他のクエリ・path・末尾の / は残す', () => {
+    expect(
+      normalizeUrl('https://A.test:443/p/?id=1&utm_source=x&fbclid=y&gclid=z&mc_cid=1#top'),
+    ).toBe('https://a.test/p/?id=1')
+  })
+
+  it('落とすものが無ければクエリを再エンコードしない', () => {
+    expect(normalizeUrl('https://a.test/p?q=a%20b')).toBe('https://a.test/p?q=a%20b')
+  })
+
+  it('解釈できない URL はそのまま返す', () => {
+    expect(normalizeUrl('not a url')).toBe('not a url')
   })
 })

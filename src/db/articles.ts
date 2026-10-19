@@ -3,7 +3,8 @@ import type { ParsedItem } from '../domain/feed-parse'
 /**
  * 取得した記事を保存する文。呼び出し側がまとめて batch に入れる。
  *
- * 記事は (feed_id, guid) の一意制約で二重登録を避ける。既存の記事は上書きしない
+ * 記事は (feed_id, guid) と url の一意制約で二重登録を避ける。後者は別のフィードが
+ * 同じ記事を配信した場合で、先に取得した方を残す。既存の記事は上書きしない
  * （既読や判定の紐付けを壊さないため）。
  */
 export function insertArticleStatements(
@@ -14,7 +15,7 @@ export function insertArticleStatements(
 ): D1PreparedStatement[] {
   const insert = db.prepare(
     `INSERT INTO articles (feed_id, guid, url, title, excerpt, published_at, fetched_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (feed_id, guid) DO NOTHING`,
+     VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
   )
   return items.map((i) =>
     insert.bind(feedId, i.guid, i.url, i.title, i.excerpt, i.publishedAt, now),
