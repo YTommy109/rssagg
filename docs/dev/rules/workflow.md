@@ -45,9 +45,11 @@ GitHub のリポジトリ設定では "Allow squash merging" と "Allow rebase m
 
 1. `pnpm run lint`
 2. `pnpm run format:check`
-3. `pnpm run typecheck`
-4. `pnpm test`
+3. `pnpm run lint:md`
+4. `pnpm run typecheck`
+5. `pnpm test`
 
+- `.md` の保存時 lint はフックで走るが、Edit/Write ツール経由に限る。Bash の heredoc や `sed` で書いた `.md` は対象外なので、PR の前に `pnpm run lint:md` を必ず回す
 - **テスト結果をパイプ越しに判定しない。** `pnpm test | tail -80` の終了コードは `tail` のもので、テストが落ちていても 0 になる。`set -o pipefail` を有効にするか、`pnpm test > log 2>&1; echo $?` のように終了コードを明示的に記録し、あわせて要約行も確認する
 - 要約行だけを目視する運用は、出力が途中で切れていると見落とす。終了コードと要約行の両方を根拠にする
 
