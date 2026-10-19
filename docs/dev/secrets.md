@@ -27,3 +27,7 @@ pnpm exec wrangler secret put JEV_API_KEY
 ## 型
 
 `JEV_API_KEY` は `src/env.ts` の `AppEnv` で型を足している。`wrangler types` の生成物（`worker-configuration.d.ts`）には入らない。
+
+## 空のとき
+
+`JEV_API_KEY` が空（未登録）のときは、Jev の判定を飛ばして `console.warn` に残す（`src/jobs/judge.ts`）。記事の取り込みや画面の表示は止まらない。判定だけが無いまま進むので、本番で判定が付かないときは `wrangler secret list` で登録を確かめる。

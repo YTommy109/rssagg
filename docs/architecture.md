@@ -28,7 +28,7 @@ flowchart LR
 | 定期実行 | Cron Triggers（毎時、`src/jobs/crawl.ts`） | 採用 |
 | クロールの分散 | 不要（Cron 1 本で並列数を絞る） | 採用 |
 | データベース | D1（[ADR-0003](adr/0003-d1-r2-vectorize.md)） | 採用 |
-| 選別 | フィード単位のジャンル（AI なし）。複合的なサイトなど限定した対象だけ Jev（[ADR-0011](adr/0011-ai-scope.md)） | 採用 |
+| 選別 | フィード単位のジャンル（AI なし）。複合的なサイトなど限定した対象だけ Jev（[ADR-0011](adr/0011-ai-scope.md)）。Jev の呼び出しは `src/ai/jev.ts`、判定と保存は `src/jobs/judge.ts` | 採用 |
 | シークレット（Jev の API キー） | Workers Secrets（[ADR-0009](adr/0009-workers-secrets.md)、登録手順は [dev/secrets.md](dev/secrets.md)） | 採用 |
 | 埋め込み | Workers AI + Vectorize | 不採用（[ADR-0011](adr/0011-ai-scope.md)） |
 | アーカイブ保存 | R2（形式は未決） | 採用（形式のみ未決） |
