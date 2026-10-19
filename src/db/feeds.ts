@@ -5,10 +5,12 @@ export type Feed = {
   title: string | null
   etag: string | null
   last_modified: string | null
+  /** ユーザー定義のジャンル。NULL は未設定。 */
+  genre: string | null
   created_at: number
 }
 
-const COLUMNS = 'id, url, title, etag, last_modified, created_at'
+const COLUMNS = 'id, url, title, etag, last_modified, genre, created_at'
 
 /**
  * フィードを登録する。同じ URL が既にあれば登録せず undefined を返す。
@@ -55,4 +57,22 @@ export function updateFeedCacheStatement(
 export async function deleteFeed(db: D1Database, id: number): Promise<boolean> {
   const { meta } = await db.prepare('DELETE FROM feeds WHERE id = ?').bind(id).run()
   return meta.changes > 0
+}
+
+/** ジャンルを設定する。null で未設定に戻す。フィードが無ければ false。 */
+export async function setFeedGenre(
+  db: D1Database,
+  id: number,
+  genre: string | null,
+): Promise<boolean> {
+  const { meta } = await db.prepare('UPDATE feeds SET genre = ? WHERE id = ?').bind(genre, id).run()
+  return meta.changes > 0
+}
+
+/** 使われているジャンルの一覧。画面で選ばせて表記ゆれを抑える（ADR-0011）。 */
+export async function listGenres(db: D1Database): Promise<string[]> {
+  const { results } = await db
+    .prepare('SELECT DISTINCT genre FROM feeds WHERE genre IS NOT NULL ORDER BY genre')
+    .all<{ genre: string }>()
+  return results.map((r) => r.genre)
 }

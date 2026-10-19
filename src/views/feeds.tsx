@@ -9,6 +9,19 @@ import type { Feed } from '../db/feeds'
 export const FeedRow: FC<{ feed: Feed }> = ({ feed }) => (
   <li id={`feed-${feed.id}`}>
     <span>{feed.title ?? feed.url}</span>{' '}
+    {/* 変更したら送る。空にすると未設定に戻り、記事一覧の絞り込みの対象外になる。 */}
+    <input
+      type="text"
+      name="genre"
+      list="genres"
+      aria-label="ジャンル"
+      placeholder="ジャンル未設定"
+      maxlength={50}
+      value={feed.genre ?? ''}
+      hx-put={`/settings/feeds/${feed.id}/genre`}
+      hx-trigger="change"
+      hx-swap="none"
+    />{' '}
     <button
       type="button"
       hx-delete={`/settings/feeds/${feed.id}`}
@@ -29,7 +42,7 @@ export const AddedFeed: FC<{ feed: Feed }> = ({ feed }) => (
   </>
 )
 
-export const FeedsPage: FC<{ feeds: Feed[] }> = ({ feeds }) => (
+export const FeedsPage: FC<{ feeds: Feed[]; genres: string[] }> = ({ feeds, genres }) => (
   <section>
     <h1>フィード</h1>
     {/* 入力の検証は常にサーバーが行い、理由を #form-error に出す。type="url" にしないのは、
@@ -52,6 +65,11 @@ export const FeedsPage: FC<{ feeds: Feed[] }> = ({ feeds }) => (
       <button type="submit">登録</button>
     </form>
     <p id="form-error" role="alert" />
+    <datalist id="genres">
+      {genres.map((g) => (
+        <option value={g} />
+      ))}
+    </datalist>
     <ul id="feed-list">
       {feeds.map((feed) => (
         <FeedRow feed={feed} />

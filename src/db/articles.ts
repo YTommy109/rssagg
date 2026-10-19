@@ -36,16 +36,44 @@ export type ArticleListItem = {
 /** 一覧の上限。続きの読み込みは扱わない。 */
 export const ARTICLE_LIST_LIMIT = 50
 
-/** 新しい順（公開日時、無ければ取得日時）。並びは articles_recent インデックスと同じ式にする。 */
-export async function listRecentArticles(db: D1Database): Promise<ArticleListItem[]> {
+const marks = (xs: string[]) => xs.map(() => '?').join(',')
+
+/** ジャンルによる絞り込み。 */
+export type GenreFilter = { include: string[]; exclude: string[] }
+
+/**
+ * 新しい順（公開日時、無ければ取得日時）。並びは articles_recent インデックスと同じ式にする。
+ *
+ * ジャンル未設定のフィードの記事は、include / exclude のどちらでも隠さない（ADR-0011）。
+ * include が空なら全ジャンルを通し、exclude は include より優先する。
+ */
+export async function listRecentArticles(
+  db: D1Database,
+  filter: GenreFilter,
+): Promise<ArticleListItem[]> {
+  const conds = ['f.genre IS NULL']
+  const inner: string[] = []
+  const params: string[] = []
+  if (filter.include.length > 0) {
+    inner.push(`f.genre IN (${marks(filter.include)})`)
+    params.push(...filter.include)
+  }
+  if (filter.exclude.length > 0) {
+    inner.push(`f.genre NOT IN (${marks(filter.exclude)})`)
+    params.push(...filter.exclude)
+  }
+  if (inner.length > 0) conds.push(`(${inner.join(' AND ')})`)
+  else conds.push('1')
+
   const { results } = await db
     .prepare(
       `SELECT a.id, a.url, a.title, f.title AS feed_title, f.url AS feed_url,
               COALESCE(a.published_at, a.fetched_at) AS at
        FROM articles a JOIN feeds f ON f.id = a.feed_id
+       WHERE ${conds.join(' OR ')}
        ORDER BY at DESC, a.id DESC LIMIT ?`,
     )
-    .bind(ARTICLE_LIST_LIMIT)
+    .bind(...params, ARTICLE_LIST_LIMIT)
     .all<ArticleListItem>()
   return results
 }

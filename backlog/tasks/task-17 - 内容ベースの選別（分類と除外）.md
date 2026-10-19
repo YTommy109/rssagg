@@ -1,10 +1,11 @@
 ---
 id: TASK-17
 title: サイト単位のジャンルによる選別（Jev 不使用）
-status: To Do
-assignee: []
+status: Done
+assignee:
+  - '@claude'
 created_date: '2026-10-18 13:13'
-updated_date: '2026-10-19 02:55'
+updated_date: '2026-10-19 05:13'
 labels: []
 dependencies:
   - TASK-20
@@ -22,9 +23,15 @@ ordinal: 10000
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 フィード管理画面で、フィードにジャンルを設定・変更できる
-- [ ] #2 記事一覧で、ジャンルの include / exclude を設定でき、設定に従って記事が絞り込まれる
-- [ ] #3 ジャンル未設定のフィードの記事は、絞り込みの対象外として扱う（隠れない）。その扱いが画面か docs で分かる
-- [ ] #4 スキーマ変更はマイグレーションで行う
-- [ ] #5 テストが、絞り込みの include / exclude と未設定の扱いを検証している
+- [x] #1 フィード管理画面で、フィードにジャンルを設定・変更できる
+- [x] #2 記事一覧で、ジャンルの include / exclude を設定でき、設定に従って記事が絞り込まれる
+- [x] #3 ジャンル未設定のフィードの記事は、絞り込みの対象外として扱う（隠れない）。その扱いが画面か docs で分かる
+- [x] #4 スキーマ変更はマイグレーションで行う
+- [x] #5 テストが、絞り込みの include / exclude と未設定の扱いを検証している
 <!-- AC:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+feeds.genre（自由文字列・NULL可）をマイグレーションで追加。フィード管理画面の行にジャンル入力（datalist で既存候補）を置き PUT /settings/feeds/:id/genre で保存。記事一覧は ?include=&exclude= の GET フォームで絞り込み（exclude 優先、未設定フィードは常に表示。画面に注記）。test/genre.spec.ts で include/exclude/未設定/設定変更を検証。lint・format・lint:md・typecheck・test（64件）すべて exit 0。
+<!-- SECTION:FINAL_SUMMARY:END -->

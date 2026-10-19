@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
-import { deleteFeed, insertFeed, listFeeds } from '../db/feeds'
-import { feedIdSchema, feedUrlSchema } from '../domain/feed-input'
+import { deleteFeed, insertFeed, listFeeds, listGenres, setFeedGenre } from '../db/feeds'
+import { feedIdSchema, feedUrlSchema, genreSchema } from '../domain/feed-input'
 import type { AppEnv } from '../env'
 import { AddedFeed, FeedsPage } from '../views/feeds'
 import { page } from '../views/layout'
@@ -13,7 +13,14 @@ import { page } from '../views/layout'
  * layout の htmx-config で 409 と 422 だけを差し替える設定にしてある。
  */
 export const feedsPageRoute = new Hono<AppEnv>()
-  .get('/', async (c) => c.html(page('フィード', <FeedsPage feeds={await listFeeds(c.env.DB)} />)))
+  .get('/', async (c) =>
+    c.html(
+      page(
+        'フィード',
+        <FeedsPage feeds={await listFeeds(c.env.DB)} genres={await listGenres(c.env.DB)} />,
+      ),
+    ),
+  )
   .post('/', async (c) => {
     const reject = (status: 409 | 422, message: string) => {
       c.header('HX-Retarget', '#form-error')
@@ -33,6 +40,15 @@ export const feedsPageRoute = new Hono<AppEnv>()
     const feed = await insertFeed(c.env.DB, url.data, Math.floor(Date.now() / 1000))
     if (feed === undefined) return reject(409, 'すでに登録されています。')
     return c.html(<AddedFeed feed={feed} />, 201)
+  })
+  .put('/:id/genre', async (c) => {
+    const id = feedIdSchema.safeParse(c.req.param('id'))
+    if (!id.success) return c.text('invalid_id', 400)
+    const genre = genreSchema.safeParse((await c.req.parseBody())['genre'])
+    if (!genre.success) return c.text('invalid_genre', 422)
+
+    if (!(await setFeedGenre(c.env.DB, id.data, genre.data))) return c.text('not_found', 404)
+    return c.body(null, 204)
   })
   .delete('/:id', async (c) => {
     const id = feedIdSchema.safeParse(c.req.param('id'))

@@ -29,3 +29,10 @@ export const feedIdSchema = z
   .string()
   .regex(/^[1-9]\d{0,14}$/u)
   .transform(Number)
+
+/** ジャンル。前後の空白を除き、空文字は未設定（null）として扱う。 */
+export const genreSchema = z
+  .string()
+  .trim()
+  .max(50)
+  .transform((g) => (g === '' ? null : g))
