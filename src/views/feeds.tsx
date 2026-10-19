@@ -6,8 +6,12 @@ import type { Feed } from '../db/feeds'
  * 一覧の 1 行。登録の応答でもそのまま返し、htmx が一覧の末尾へ足す。
  * 削除は取り込み済みの記事も連鎖して消すため、確認を挟む。
  */
-export const FeedRow: FC<{ feed: Feed }> = ({ feed }) => (
-  <li id={`feed-${feed.id}`} class="l--flex -g:10 -ai:center">
+export const FeedRow: FC<{ feed: Feed; oob?: boolean }> = ({ feed, oob }) => (
+  <li
+    id={`feed-${feed.id}`}
+    class="l--flex -g:10 -ai:center"
+    hx-swap-oob={oob === true ? 'true' : undefined}
+  >
     <span>{feed.title ?? feed.url}</span>
     {/* 変更したら送る。空にすると未設定に戻り、記事一覧の絞り込みの対象外になる。
         応答の本体は使わず、候補（#genres）と失敗表示（#form-error）を out-of-band で受け取る。 */}
@@ -23,6 +27,15 @@ export const FeedRow: FC<{ feed: Feed }> = ({ feed }) => (
       hx-trigger="change"
       hx-swap="none"
     />
+    {/* 結果は行の差し替えと #fetch-status・#form-error で受け取る。二重に押せないよう、実行中は無効にする。 */}
+    <button
+      type="button"
+      hx-post={`/settings/feeds/${feed.id}/fetch`}
+      hx-swap="none"
+      hx-disabled-elt="this"
+    >
+      今すぐ取得
+    </button>
     <button
       type="button"
       hx-delete={`/settings/feeds/${feed.id}`}
@@ -45,6 +58,20 @@ export const AddedFeed: FC<{ feed: Feed }> = ({ feed }) => (
     <ClearError />
   </>
 )
+
+/** 今すぐ取得に成功したときの応答。タイトルを更新した行へ入れ替え、結果を出し、前回の失敗の表示を消す。 */
+export const Fetched: FC<{ feed: Feed }> = ({ feed }) => (
+  <>
+    <FeedRow feed={feed} oob />
+    <p id="fetch-status" role="status" hx-swap-oob="true">
+      取得しました。<a href="/">記事一覧</a>に反映されています。
+    </p>
+    <ClearError />
+  </>
+)
+
+/** 結果の表示を空にする（out-of-band）。失敗したときに、前回の成功の表示を残さない。 */
+export const ClearFetchStatus: FC = () => <p id="fetch-status" role="status" hx-swap-oob="true" />
 
 /** ジャンル入力の候補。既存の表記を選ばせて、表記ゆれを増やさない（ADR-0011）。 */
 const GenreOptions: FC<{ genres: string[]; oob?: boolean }> = ({ genres, oob }) => (
@@ -87,6 +114,7 @@ export const FeedsPage: FC<{ feeds: Feed[]; genres: string[] }> = ({ feeds, genr
       <button type="submit">登録</button>
     </form>
     <p id="form-error" role="alert" />
+    <p id="fetch-status" role="status" />
     <GenreOptions genres={genres} />
     <ul id="feed-list" class="l--stack -g:10">
       {feeds.map((feed) => (
