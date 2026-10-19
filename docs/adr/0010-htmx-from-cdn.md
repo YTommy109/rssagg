@@ -1,6 +1,6 @@
 # ADR-0010: htmx は CDN から、バージョンを固定して SRI つきで読み込む
 
-- 状態: 採用
+- 状態: 置換（[ADR-0013](0013-bundle-frontend-assets.md)）
 - 日付: 2026-10-18
 
 <!-- constrained-by ./0006-htmx-hyperscript-sse.md -->
