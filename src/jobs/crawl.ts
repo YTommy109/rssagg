@@ -1,7 +1,7 @@
 import { insertArticleStatements } from '../db/articles'
 import { type Feed, listFeeds, updateFeedCacheStatement } from '../db/feeds'
 import { feedUrlSchema } from '../domain/feed-input'
-import { decodeFeedBytes, parseFeed } from '../domain/feed-parse'
+import { decodeFeedBytes, type ParsedFeed, parseFeed } from '../domain/feed-parse'
 
 /** 同時に取得するフィード数。Workers の同時接続数（6）に収める。 */
 const CONCURRENCY = 6
@@ -26,14 +26,19 @@ function resolveRedirect(location: string, base: string): string | null {
  * リダイレクトを自前で追って取得する。fetch 任せだと、登録時に feedUrlSchema で検証した
  * URL と実際の取得先が食い違い、移動先が http/https 以外や認証情報つきでも検査されない。
  */
-async function fetchFollowing(url: string, init: RequestInit): Promise<Response> {
+async function fetchFollowing(
+  url: string,
+  init: RequestInit,
+): Promise<{ res: Response; url: string }> {
   let current = url
   for (let hops = 0; ; hops++) {
     // oxlint-disable-next-line no-await-in-loop -- 移動先は直前のレスポンスで決まるため、順に追う
     const res = await fetch(current, { ...init, redirect: 'manual' })
     const location = res.headers.get('Location')
     // 304 は Location があっても移動ではない。
-    if (res.status < 300 || res.status >= 400 || res.status === 304 || location === null) return res
+    if (res.status < 300 || res.status >= 400 || res.status === 304 || location === null) {
+      return { res, url: current }
+    }
     // oxlint-disable-next-line no-await-in-loop -- 移動先に進むので、読まない本文は捨てる
     await res.body?.cancel()
     if (hops >= MAX_REDIRECTS) throw new Error(`${url}: too many redirects`)
@@ -72,33 +77,63 @@ async function readLimited(res: Response, url: string): Promise<Uint8Array> {
   return out
 }
 
-/** 1 フィードを取得して記事を保存する。更新が無ければ（304）本文を取り直さず、何も書かない。 */
-export async function crawlFeed(db: D1Database, feed: Feed, now: number): Promise<void> {
-  const headers = new Headers({ 'User-Agent': 'rssagg' })
-  if (feed.etag !== null) headers.set('If-None-Match', feed.etag)
-  if (feed.last_modified !== null) headers.set('If-Modified-Since', feed.last_modified)
+/** 取得した本文。url はリダイレクトを追った後の取得先（HTML の相対 URL の基準になる）。 */
+export type FetchedBody = { url: string; headers: Headers; bytes: Uint8Array }
 
-  const res = await fetchFollowing(feed.url, {
+/**
+ * URL を取得して本文を読む。更新が無ければ（304）null。HTTP エラーは例外。
+ * 定期クロールと、登録時の取得（利用者が入力した任意の URL）が共有する口なので、
+ * リダイレクト検査とサイズ上限はここに集める。
+ */
+export async function fetchBody(url: string, extra = new Headers()): Promise<FetchedBody | null> {
+  const headers = new Headers(extra)
+  headers.set('User-Agent', 'rssagg')
+  const { res, url: finalUrl } = await fetchFollowing(url, {
     headers,
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   })
-  if (res.status === 304) return
-  if (!res.ok) throw new Error(`${feed.url}: HTTP ${res.status}`)
+  if (res.status === 304) return null
+  if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`)
+  return { url: finalUrl, headers: res.headers, bytes: await readLimited(res, url) }
+}
 
-  const parsed = parseFeed(
-    decodeFeedBytes(await readLimited(res, feed.url), res.headers.get('Content-Type')),
-  )
+/** 取得した本文をフィードとして解釈する。 */
+export function parseFetched(fetched: FetchedBody): ParsedFeed {
+  return parseFeed(decodeFeedBytes(fetched.bytes, fetched.headers.get('Content-Type')))
+}
+
+/** 解釈したフィードの記事とキャッシュ用ヘッダ（etag など）を保存する。 */
+export async function saveFeed(
+  db: D1Database,
+  { feedId, parsed, headers }: { feedId: number; parsed: ParsedFeed; headers: Headers },
+  now: number,
+): Promise<void> {
   // etag の更新は記事の保存と同じバッチに入れる。記事が保存されないまま etag だけ進むと、
   // 次回は 304 になって取りこぼした記事が二度と取れない。
   await db.batch([
-    ...insertArticleStatements(db, feed.id, parsed.items, now),
+    ...insertArticleStatements(db, feedId, parsed.items, now),
     updateFeedCacheStatement(db, {
-      id: feed.id,
+      id: feedId,
       title: parsed.title,
-      etag: res.headers.get('ETag'),
-      last_modified: res.headers.get('Last-Modified'),
+      etag: headers.get('ETag'),
+      last_modified: headers.get('Last-Modified'),
     }),
   ])
+}
+
+/** 1 フィードを取得して記事を保存する。更新が無ければ（304）本文を取り直さず、何も書かない。 */
+export async function crawlFeed(db: D1Database, feed: Feed, now: number): Promise<void> {
+  const headers = new Headers()
+  if (feed.etag !== null) headers.set('If-None-Match', feed.etag)
+  if (feed.last_modified !== null) headers.set('If-Modified-Since', feed.last_modified)
+
+  const fetched = await fetchBody(feed.url, headers)
+  if (fetched === null) return
+  await saveFeed(
+    db,
+    { feedId: feed.id, parsed: parseFetched(fetched), headers: fetched.headers },
+    now,
+  )
 }
 
 /**

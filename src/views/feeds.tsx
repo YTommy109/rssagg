@@ -1,6 +1,7 @@
 import type { FC } from 'hono/jsx'
 
 import type { Feed } from '../db/feeds'
+import type { FeedCandidate } from '../domain/feed-discover'
 
 /**
  * 一覧の 1 行。登録の応答でもそのまま返し、htmx が一覧の末尾へ足す。
@@ -56,6 +57,27 @@ export const AddedFeed: FC<{ feed: Feed }> = ({ feed }) => (
   <>
     <FeedRow feed={feed} />
     <ClearError />
+  </>
+)
+
+/**
+ * 複数のフィードが見つかったときの候補。選ぶと、その URL で登録し直す（成功すると ClearError が候補を消す）。
+ * 推測が外れやすい（サイト全体・コメントなどがある）ので、自動では選ばない。
+ */
+export const Candidates: FC<{ candidates: FeedCandidate[] }> = ({ candidates }) => (
+  <>
+    複数のフィードが見つかりました。登録するものを選んでください。
+    {candidates.map((c) => (
+      <button
+        type="button"
+        hx-post="/settings/feeds"
+        hx-vals={JSON.stringify({ url: c.url })}
+        hx-target="#feed-list"
+        hx-swap="beforeend"
+      >
+        {c.title ?? c.url}（{c.url}）
+      </button>
+    ))}
   </>
 )
 

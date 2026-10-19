@@ -2,7 +2,7 @@ import { html } from 'hono/html'
 import type { Child, FC, PropsWithChildren } from 'hono/jsx'
 
 // htmx は既定で 4xx/5xx を差し替えない。登録・ジャンル変更の失敗（422 不正・409 重複・404 消えたフィード）は
-// 理由を画面に出したいので、この 4 つだけ差し替える（502 は今すぐ取得の失敗）。error を立てるのは、失敗なのに successful になって
+// 理由を画面に出したいので、この 4 つだけ差し替える（502 は今すぐ取得と、登録時の取得の失敗）。error を立てるのは、失敗なのに successful になって
 // 入力欄が消えるのを防ぐため。それ以外の 4xx/5xx は、エラー文が一覧などに混ざらないよう差し替えない。
 const HTMX_CONFIG = JSON.stringify({
   responseHandling: [
