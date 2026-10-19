@@ -112,4 +112,50 @@ describe('crawlAll', () => {
       expect(failed).toStrictEqual(['https://a.test/feed'])
     })
   })
+
+  describe('リダイレクト', () => {
+    const moved = (location: string, status = 301) =>
+      new Response(null, { status, headers: { Location: location } })
+    // a.test/feed から始め、URL ごとに返すレスポンスを決める。
+    const run = async (routes: Record<string, () => Response>) => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      const spy = vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
+        const route = routes[new Request(input).url]
+        return Promise.resolve(route ? route() : new Response('', { status: 404 }))
+      })
+      await env.DB.prepare('DELETE FROM feeds WHERE id = 2').run()
+      return { result: await crawlAll(env.DB, NOW), spy }
+    }
+
+    it('移動先を追って取得する（相対 Location は取得元 URL を基準に解決する）', async () => {
+      const { result, spy } = await run({
+        'https://a.test/feed': () => moved('/new/feed'),
+        'https://a.test/new/feed': () => moved('https://b.test/rss', 302),
+        'https://b.test/rss': () => new Response(RSS),
+      })
+      expect(result.failed).toStrictEqual([])
+      expect(await count()).toBe(2)
+      expect(spy.mock.calls.map(([u]) => u)).toStrictEqual([
+        'https://a.test/feed',
+        'https://a.test/new/feed',
+        'https://b.test/rss',
+      ])
+    })
+
+    it('追う回数が上限（5 回）を超えたら失敗にする', async () => {
+      const { result } = await run({
+        'https://a.test/feed': () => moved('https://a.test/feed'),
+      })
+      expect(result.failed).toStrictEqual(['https://a.test/feed'])
+    })
+
+    it.each(['file:///etc/passwd', 'https://user:pw@evil.test/rss', 'http://[bad'])(
+      '不正な移動先（%s）は失敗にする',
+      async (location) => {
+        const { result, spy } = await run({ 'https://a.test/feed': () => moved(location) })
+        expect(result.failed).toStrictEqual(['https://a.test/feed'])
+        expect(spy).toHaveBeenCalledOnce()
+      },
+    )
+  })
 })
