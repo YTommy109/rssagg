@@ -60,4 +60,15 @@ describe('crawlAll', () => {
     await crawlAll(env.DB, NOW)
     expect(await count()).toBe(2)
   })
+
+  it('別のフィードが同じ記事（計測用パラメータ・fragment 違いの URL）を配信しても 1 件にする', async () => {
+    const other = `<?xml version="1.0"?><rss version="2.0"><channel><title>Mirror</title>
+<item><title>A</title><link>https://a.test/1?utm_source=rss#top</link><guid>m1</guid></item></channel></rss>`
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input) =>
+      Promise.resolve(new Response(new Request(input).url.includes('bad') ? other : RSS)),
+    )
+    await crawlAll(env.DB, NOW)
+    // RSS は A・B の 2 件、other は A と同じ記事なので増えない。
+    expect(await count()).toBe(2)
+  })
 })

@@ -27,6 +27,9 @@ CREATE TABLE articles (
   UNIQUE (feed_id, guid)
 );
 
+-- 複数のフィードが同じ記事を配信しても 1 件にする。url は取得時に正規化済み（feed-parse の normalizeUrl）。
+CREATE UNIQUE INDEX articles_url ON articles (url);
+
 -- 一覧は新しい順に引くため。公開日時が無いフィードは取得日時で代用する。
 CREATE INDEX articles_recent ON articles (COALESCE(published_at, fetched_at) DESC);
 

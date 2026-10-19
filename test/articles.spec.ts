@@ -80,8 +80,8 @@ describe('記事一覧 /', () => {
     await env.DB.batch(
       Array.from({ length: n }, (_, i) =>
         env.DB.prepare(
-          "INSERT INTO articles (feed_id, guid, url, title, published_at, fetched_at) VALUES (1, ?, 'https://a.test/x', ?, ?, 0)",
-        ).bind(`g${i}`, `T${i}-end`, i),
+          'INSERT INTO articles (feed_id, guid, url, title, published_at, fetched_at) VALUES (1, ?, ?, ?, ?, 0)',
+        ).bind(`g${i}`, `https://a.test/x${i}`, `T${i}-end`, i),
       ),
     )
     expect((await get()).match(/-end</gu)).toHaveLength(ARTICLE_LIST_LIMIT)

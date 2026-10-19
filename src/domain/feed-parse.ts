@@ -83,8 +83,35 @@ function guidPermalink(v: unknown): string | null {
   return s !== null && /^https?:\/\//u.test(s) ? s : null
 }
 
+// 同じ記事でも配信元ごとに付く計測用パラメータ。これだけ落とし、path や他のクエリには触れない。
+const TRACKING_PARAM_RE = /^(utm_|fbclid$|gclid$|mc_[ce]id$)/iu
+
+/**
+ * 記事の URL を重複判定用に揃える。fragment と計測用クエリを落とす（host の小文字化と
+ * 既定ポートの省略は URL が行う）。path の末尾の `/` は別の URL かもしれないので触らない。
+ * 解釈できない URL はそのまま返す。
+ */
+export function normalizeUrl(raw: string): string {
+  let u: URL
+  try {
+    u = new URL(raw)
+  } catch {
+    return raw
+  }
+  u.hash = ''
+  // 走査しながら delete すると次のキーを読み飛ばすので、残すものを詰め直す。
+  const kept = new URLSearchParams()
+  for (const [k, v] of u.searchParams) {
+    if (!TRACKING_PARAM_RE.test(k)) kept.append(k, v)
+  }
+  // 落とすものが無ければ query を再エンコードしない。
+  if (kept.size !== u.searchParams.size) u.search = kept.toString()
+  return u.href
+}
+
 function toItem(n: Node): ParsedItem | null {
-  const url = text(n['link']) ?? atomLink(n['link']) ?? guidPermalink(n['guid'])
+  const rawUrl = text(n['link']) ?? atomLink(n['link']) ?? guidPermalink(n['guid'])
+  const url = rawUrl === null ? null : normalizeUrl(rawUrl)
   // guid が無いフィードは URL を識別子にする。URL も無い項目は記事として扱えない。
   const guid = firstText(n, 'guid', 'id') ?? url
   if (url === null || guid === null) return null
