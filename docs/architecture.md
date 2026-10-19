@@ -31,7 +31,7 @@ flowchart LR
 | 選別 | フィード単位のジャンル（AI なし）。複合的なサイトなど限定した対象だけ Jev（[ADR-0011](adr/0011-ai-scope.md)）。Jev の呼び出しは `src/ai/jev.ts`、判定と保存は `src/jobs/judge.ts` | 採用 |
 | シークレット（Jev の API キー） | Workers Secrets（[ADR-0009](adr/0009-workers-secrets.md)、登録手順は [dev/secrets.md](dev/secrets.md)） | 採用 |
 | 埋め込み | Workers AI + Vectorize | 不採用（[ADR-0011](adr/0011-ai-scope.md)） |
-| アーカイブ保存 | R2（形式は未決） | 採用（形式のみ未決） |
+| アーカイブ保存 | R2、本文を Markdown で保存（[ADR-0014](adr/0014-archive-format.md)） | 採用 |
 
 ## ディレクトリ構成
 
@@ -39,6 +39,6 @@ flowchart LR
 
 ## 未決事項
 
-- アーカイブ形式
+- アーカイブの取得・本文抽出の方法（TASK-19 で選ぶ。形式は [ADR-0014](adr/0014-archive-format.md)）
 
 重複判定（正規化 URL のみ）と分類の方式（ユーザー定義のジャンル）は [ADR-0011](adr/0011-ai-scope.md) で決めた。
