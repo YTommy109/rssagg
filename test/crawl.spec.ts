@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { crawlAll } from '../src/jobs/crawl'
+import { crawlAll, MAX_FEED_BYTES } from '../src/jobs/crawl'
 
 const RSS = `<?xml version="1.0"?><rss version="2.0"><channel><title>Blog</title>
 <item><title>A</title><link>https://a.test/1</link><guid>g1</guid></item>
@@ -70,5 +70,46 @@ describe('crawlAll', () => {
     await crawlAll(env.DB, NOW)
     // RSS は A・B の 2 件、other は A と同じ記事なので増えない。
     expect(await count()).toBe(2)
+  })
+
+  describe('レスポンスサイズの上限', () => {
+    // RSS を空白で水増しして、本文のバイト数をちょうど size にする。
+    const sized = (size: number) =>
+      RSS + ' '.repeat(size - new TextEncoder().encode(RSS).byteLength)
+    const run = async (res: () => Response) => {
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(res()))
+      await env.DB.prepare('DELETE FROM feeds WHERE id = 2').run()
+      return crawlAll(env.DB, NOW)
+    }
+
+    it('上限ちょうどなら保存する', async () => {
+      const { failed } = await run(() => new Response(sized(MAX_FEED_BYTES)))
+      expect(failed).toStrictEqual([])
+      expect(await count()).toBe(2)
+    })
+
+    it('上限を超えたら失敗にして保存しない（Content-Length 無し）', async () => {
+      const { failed } = await run(() => new Response(sized(MAX_FEED_BYTES + 1)))
+      expect(failed).toStrictEqual(['https://a.test/feed'])
+      expect(await count()).toBe(0)
+    })
+
+    it('Content-Length が上限超なら本文を読まずに失敗にする', async () => {
+      const pull = vi.fn<() => void>()
+      const body = new ReadableStream({ pull }, { highWaterMark: 0 })
+      const { failed } = await run(
+        () => new Response(body, { headers: { 'Content-Length': String(MAX_FEED_BYTES + 1) } }),
+      )
+      expect(failed).toStrictEqual(['https://a.test/feed'])
+      expect(pull).not.toHaveBeenCalled()
+    })
+
+    it('Content-Length が偽りでも、読みながら数えて失敗にする', async () => {
+      const { failed } = await run(
+        () => new Response(sized(MAX_FEED_BYTES + 1), { headers: { 'Content-Length': '10' } }),
+      )
+      expect(failed).toStrictEqual(['https://a.test/feed'])
+    })
   })
 })
