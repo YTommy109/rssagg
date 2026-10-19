@@ -19,7 +19,8 @@
     "migrate:diff": "atlas migrate diff --env local",
     "migrate:local": "wrangler d1 migrations apply DB --local",
     "migrate:remote": "wrangler d1 migrations apply rssagg --remote",
-    "migrate:list": "wrangler d1 migrations list rssagg --remote"
+    "migrate:list": "wrangler d1 migrations list rssagg --remote",
+    "prepare": "lefthook install"
   },
   "dependencies": {
     "fast-xml-parser": "^5.11.2",
@@ -29,6 +30,7 @@
   "devDependencies": {
     "@cloudflare/vitest-plugin": "^1.4.4",
     "@types/node": "^24.0.0",
+    "lefthook": "^2.2.2",
     "markdownlint-cli2": "^0.23.3",
     "oxfmt": "^0.73.0",
     "oxlint": "^1.88.0",

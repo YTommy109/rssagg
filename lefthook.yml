@@ -1,0 +1,18 @@
+# pre-commit はステージ済みファイルだけに軽い検査をかける。
+# 型チェックとテストは遅いので置かない（CI と手元の pnpm run check に任せる）。
+pre-commit:
+  parallel: true
+  jobs:
+    - name: oxlint
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
+      run: pnpm exec oxlint --type-aware --report-unused-disable-directives {staged_files}
+    - name: oxfmt
+      glob: "*.{ts,tsx,js,jsx,mjs,cjs}"
+      run: pnpm exec oxfmt --check {staged_files}
+    - name: markdownlint
+      glob: "*.md"
+      run: pnpm exec markdownlint-cli2 {staged_files}
+    # dagayn が .git/hooks/pre-commit に入れるブロックの代わり。lefthook install が
+    # そのファイルを置き換え、退避した .old は実行されないので、ここで呼ぶ。
+    - name: dagayn
+      run: command -v dagayn >/dev/null && { dagayn update --skip-flows; dagayn detect-changes --brief; } || true
