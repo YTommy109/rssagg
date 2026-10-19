@@ -75,8 +75,16 @@ function toExcerpt(s: string | null): string | null {
   return plain === '' ? null : plain.slice(0, EXCERPT_MAX)
 }
 
+/** RSS の guid は isPermaLink が false でなければ記事の URL でもある。link の無いフィードはこれを URL にする。 */
+function guidPermalink(v: unknown): string | null {
+  const raw: unknown = Array.isArray(v) ? v[0] : v
+  if (isNode(raw) && raw['@_isPermaLink'] === 'false') return null
+  const s = text(v)
+  return s !== null && /^https?:\/\//u.test(s) ? s : null
+}
+
 function toItem(n: Node): ParsedItem | null {
-  const url = text(n['link']) ?? atomLink(n['link'])
+  const url = text(n['link']) ?? atomLink(n['link']) ?? guidPermalink(n['guid'])
   // guid が無いフィードは URL を識別子にする。URL も無い項目は記事として扱えない。
   const guid = firstText(n, 'guid', 'id') ?? url
   if (url === null || guid === null) return null
@@ -87,6 +95,26 @@ function toItem(n: Node): ParsedItem | null {
     excerpt: toExcerpt(firstText(n, 'description', 'summary', 'content')),
     publishedAt: toEpoch(firstText(n, 'pubDate', 'published', 'updated', 'dc:date')),
   }
+}
+
+const CHARSET_RE = /charset=["']?([\w.:-]+)/iu
+const XML_ENCODING_RE = /^\s*<\?xml[^>]*encoding=["']([\w.:-]+)/iu
+
+/**
+ * 取得した本文を文字列にする。Shift_JIS や EUC-JP のフィードを UTF-8 として読むと
+ * 文字化けしたタイトルがそのまま保存されるので、Content-Type の charset、無ければ
+ * XML 宣言の encoding で復号する。どちらも無いか未知の名前なら UTF-8。
+ */
+export function decodeFeedBytes(bytes: Uint8Array, contentType: string | null): string {
+  const head = new TextDecoder('latin1').decode(bytes.subarray(0, 200))
+  const label = CHARSET_RE.exec(contentType ?? '')?.[1] ?? XML_ENCODING_RE.exec(head)?.[1]
+  let decoder: TextDecoder
+  try {
+    decoder = new TextDecoder(label ?? 'utf-8')
+  } catch {
+    decoder = new TextDecoder()
+  }
+  return decoder.decode(bytes)
 }
 
 /** RSS 2.0 / Atom 1.0 を解釈する。どちらでもなければ例外。 */

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
-import { crawlAll } from './crawl/crawl'
 import type { AppEnv } from './env'
+import { crawlAll } from './jobs/crawl'
 import { accessMiddleware } from './middleware/access-middleware'
 import { feedsRoute } from './routes/feeds'
 import { feedsPageRoute } from './routes/feeds-page'

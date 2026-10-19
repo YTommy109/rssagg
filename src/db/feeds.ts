@@ -36,6 +36,21 @@ export async function listFeeds(db: D1Database): Promise<Feed[]> {
   return results
 }
 
+/**
+ * 取得結果でフィードのタイトルと条件付き GET 用ヘッダを更新する文。
+ * 記事の保存と同じ batch に入れるため、実行せず文を返す。
+ */
+export function updateFeedCacheStatement(
+  db: D1Database,
+  feed: Pick<Feed, 'id' | 'title' | 'etag' | 'last_modified'>,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      'UPDATE feeds SET title = COALESCE(?, title), etag = ?, last_modified = ? WHERE id = ?',
+    )
+    .bind(feed.title, feed.etag, feed.last_modified, feed.id)
+}
+
 /** フィードを削除する。記事などの子は外部キーの連鎖削除で消える。無ければ false。 */
 export async function deleteFeed(db: D1Database, id: number): Promise<boolean> {
   const { meta } = await db.prepare('DELETE FROM feeds WHERE id = ?').bind(id).run()
