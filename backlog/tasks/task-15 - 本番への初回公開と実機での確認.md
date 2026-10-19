@@ -4,7 +4,7 @@ title: 本番への初回公開と実機での確認
 status: To Do
 assignee: []
 created_date: '2026-10-18 13:13'
-updated_date: '2026-10-18 13:38'
+updated_date: '2026-10-19 02:27'
 labels: []
 dependencies:
   - TASK-13
@@ -30,4 +30,6 @@ ordinal: 6000
 
 <!-- SECTION:NOTES:BEGIN -->
 TASK-11 からの申し送り: Access のセッションが切れた状態で htmx のリクエストを送ると、Access がログイン画面へ 302 を返し、XHR はクロスオリジンで失敗して htmx は何も差し替えない（画面は無言のまま）。本番で実機確認するときに再現し、必要なら layout.tsx に htmx:responseError / htmx:sendError で location.reload() する処理を 1 か所足す。
+
+TASK-5（PR #10）からの申し送り: マイグレーション 20261019010426_add_articles_url_unique.sql で articles.url に UNIQUE 制約を付けた。本番 D1 に同じ URL の記事が既にあると、適用に失敗する。本番に適用する前に、URL の重複が無いか確かめる。
 <!-- SECTION:NOTES:END -->
