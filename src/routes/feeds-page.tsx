@@ -1,14 +1,15 @@
 import { type Context, Hono } from 'hono'
 
-import { deleteFeed, insertFeed, listFeeds, listGenres, setFeedGenre } from '../db/feeds'
+import { deleteFeed, getFeed, insertFeed, listFeeds, listGenres, setFeedGenre } from '../db/feeds'
 import { feedUrlSchema, genreSchema } from '../domain/feed-input'
 import { rowIdSchema } from '../domain/row-id'
 import type { AppEnv } from '../env'
-import { AddedFeed, FeedsPage, GenreSaved } from '../views/feeds'
+import { crawlFeed } from '../jobs/crawl'
+import { AddedFeed, ClearFetchStatus, Fetched, FeedsPage, GenreSaved } from '../views/feeds'
 import { page } from '../views/layout'
 
 /** 失敗の理由を、要求元の要素ではなくフォーム下の #form-error に入れる。 */
-function reject(c: Context<AppEnv>, status: 404 | 409 | 422, message: string) {
+function reject(c: Context<AppEnv>, status: 404 | 409 | 422 | 502, message: string) {
   c.header('HX-Retarget', '#form-error')
   c.header('HX-Reswap', 'innerHTML')
   return c.html(<span>{message}</span>, status)
@@ -50,6 +51,33 @@ export const feedsPageRoute = new Hono<AppEnv>()
       return reject(c, 404, 'このフィードは削除されています。ページを再読み込みしてください。')
     }
     return c.html(<GenreSaved genres={await listGenres(c.env.DB)} />)
+  })
+  .post('/:id/fetch', async (c) => {
+    const id = rowIdSchema.safeParse(c.req.param('id'))
+    if (!id.success) return c.text('invalid_id', 400)
+    const feed = await getFeed(c.env.DB, id.data)
+    if (feed === undefined) {
+      return reject(c, 404, 'このフィードは削除されています。ページを再読み込みしてください。')
+    }
+
+    // 定期クロールと同じ取得処理。失敗の理由はそのまま見せる（利用者は自分 1 人）。
+    try {
+      await crawlFeed(c.env.DB, feed, Math.floor(Date.now() / 1000))
+    } catch (error) {
+      console.error(`fetch failed: ${feed.url}`, error)
+      c.header('HX-Retarget', '#form-error')
+      c.header('HX-Reswap', 'innerHTML')
+      return c.html(
+        <>
+          <span>取得に失敗しました: {error instanceof Error ? error.message : String(error)}</span>
+          <ClearFetchStatus />
+        </>,
+        502,
+      )
+    }
+    // 取得でタイトルが入るので、行は取り直す。取得中に削除されていたら、行を足さず結果だけ返す。
+    const fresh = await getFeed(c.env.DB, id.data)
+    return fresh === undefined ? c.body(null, 200) : c.html(<Fetched feed={fresh} />)
   })
   .delete('/:id', async (c) => {
     const id = rowIdSchema.safeParse(c.req.param('id'))

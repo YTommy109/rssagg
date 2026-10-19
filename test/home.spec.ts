@@ -28,7 +28,7 @@ describe('画面の土台', () => {
     expect(body).toContain('href="/settings/feeds"')
     // 404/409/422 を差し替えつつ error にする設定が落ちると、失敗の理由が出なくなるか、失敗なのに入力欄が消える。
     expect(body).toContain('name="htmx-config"')
-    expect(body).toContain('404|409|422&quot;,&quot;swap&quot;:true,&quot;error&quot;:true')
+    expect(body).toContain('404|409|422|502&quot;,&quot;swap&quot;:true,&quot;error&quot;:true')
   })
 
   it('同梱した htmx と Lism CSS を配信し、JWT が無ければ 401', async () => {

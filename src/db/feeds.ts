@@ -32,6 +32,12 @@ export async function insertFeed(
   return row ?? undefined
 }
 
+/** フィード 1 件。無ければ undefined。 */
+export async function getFeed(db: D1Database, id: number): Promise<Feed | undefined> {
+  const row = await db.prepare(`SELECT ${COLUMNS} FROM feeds WHERE id = ?`).bind(id).first<Feed>()
+  return row ?? undefined
+}
+
 /** 登録順（古い順）で全件を返す。 */
 export async function listFeeds(db: D1Database): Promise<Feed[]> {
   const { results } = await db.prepare(`SELECT ${COLUMNS} FROM feeds ORDER BY id`).all<Feed>()

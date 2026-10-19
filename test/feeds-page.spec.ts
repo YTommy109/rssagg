@@ -1,5 +1,5 @@
 import { env, exports } from 'cloudflare:workers'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Feed } from '../src/db/feeds'
 import { installAccessKeys, removeAccessKeys } from './access-helpers'
@@ -97,6 +97,59 @@ describe('/settings/feeds（フィード管理画面）', () => {
     expect((await exports.default.fetch(url, { method: 'DELETE', headers })).status).toBe(200)
   })
 
+  describe('今すぐ取得', () => {
+    const RSS = `<?xml version="1.0"?><rss version="2.0"><channel><title>Blog</title>
+<item><title>A</title><link>https://example.com/1</link><guid>g1</guid></item></channel></rss>`
+    const fetchNow = (id: number | undefined) =>
+      exports.default.fetch(`${BASE}/${id}/fetch`, { method: 'POST', headers })
+    const articleCount = async () =>
+      (await env.DB.prepare('SELECT COUNT(*) AS n FROM articles').first<{ n: number }>())?.n
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('定期クロールと同じ取得で記事を保存し、タイトルを更新した行と結果を返す', async () => {
+      await add(FEED_URL)
+      const [feed] = await feeds()
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() => Promise.resolve(new Response(RSS)))
+
+      const res = await fetchNow(feed?.id)
+      expect(res.status).toBe(200)
+      const fragment = await res.text()
+      expect(fragment).toContain('<li id="feed-')
+      expect(fragment).toContain('hx-swap-oob="true"')
+      expect(fragment).toContain('Blog')
+      expect(fragment).toContain('取得しました')
+      expect(await articleCount()).toBe(1)
+    })
+
+    it('取得に失敗したら 502 で理由をフォーム下へ出し、前回の成功の表示を消す', async () => {
+      await add(FEED_URL)
+      const [feed] = await feeds()
+      vi.spyOn(console, 'error').mockImplementation(() => {})
+      vi.spyOn(globalThis, 'fetch').mockImplementation(() =>
+        Promise.resolve(new Response('', { status: 500 })),
+      )
+
+      const res = await fetchNow(feed?.id)
+      expect(res.status).toBe(502)
+      expect(res.headers.get('HX-Retarget')).toBe('#form-error')
+      const fragment = await res.text()
+      expect(fragment).toContain('取得に失敗しました')
+      expect(fragment).toContain('HTTP 500')
+      expect(fragment).toContain('id="fetch-status"')
+      expect(await articleCount()).toBe(0)
+    })
+
+    it('消えたフィードは 404、不正な id は 400', async () => {
+      expect((await fetchNow(99_999)).status).toBe(404)
+      expect(
+        (await exports.default.fetch(`${BASE}/1e3/fetch`, { method: 'POST', headers })).status,
+      ).toBe(400)
+    })
+  })
+
   it('正の整数の表記でない id は 400 で、何も削除しない', async () => {
     await add(FEED_URL)
     const res = await exports.default.fetch(`${BASE}/1e3`, { method: 'DELETE', headers })
@@ -104,7 +157,7 @@ describe('/settings/feeds（フィード管理画面）', () => {
     expect(await feeds()).toHaveLength(1)
   })
 
-  it('JWT が無ければ表示・登録・ジャンル変更・削除のどれも 401', async () => {
+  it('JWT が無ければ表示・登録・ジャンル変更・削除・今すぐ取得のどれも 401', async () => {
     const statuses = (
       await Promise.all([
         exports.default.fetch(BASE),
@@ -117,9 +170,10 @@ describe('/settings/feeds（フィード管理画面）', () => {
           body: new URLSearchParams({ genre: 'a' }),
         }),
         exports.default.fetch(`${BASE}/1`, { method: 'DELETE' }),
+        exports.default.fetch(`${BASE}/1/fetch`, { method: 'POST' }),
       ])
     ).map((res) => res.status)
-    expect(statuses).toStrictEqual([401, 401, 401, 401])
+    expect(statuses).toStrictEqual([401, 401, 401, 401, 401])
     expect(await feeds()).toStrictEqual([])
   })
 })
