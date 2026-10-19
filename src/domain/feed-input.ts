@@ -30,9 +30,15 @@ export const feedIdSchema = z
   .regex(/^[1-9]\d{0,14}$/u)
   .transform(Number)
 
-/** ジャンル。前後の空白を除き、空文字は未設定（null）として扱う。 */
+/**
+ * ジャンル。前後の空白を除き、空文字は未設定（null）として扱う。
+ *
+ * 内側の連続する空白（全角を含む）も 1 つに潰す。見た目が同じ「web dev」と「web  dev」が
+ * 別のジャンルになると、候補にも絞り込みにも同じ名前が 2 つ並ぶ。
+ */
 export const genreSchema = z
   .string()
   .trim()
   .max(50)
+  .transform((g) => g.replaceAll(/\s+/gu, ' '))
   .transform((g) => (g === '' ? null : g))

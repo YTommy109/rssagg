@@ -9,7 +9,8 @@ import type { Feed } from '../db/feeds'
 export const FeedRow: FC<{ feed: Feed }> = ({ feed }) => (
   <li id={`feed-${feed.id}`}>
     <span>{feed.title ?? feed.url}</span>{' '}
-    {/* 変更したら送る。空にすると未設定に戻り、記事一覧の絞り込みの対象外になる。 */}
+    {/* 変更したら送る。空にすると未設定に戻り、記事一覧の絞り込みの対象外になる。
+        応答の本体は使わず、候補（#genres）と失敗表示（#form-error）を out-of-band で受け取る。 */}
     <input
       type="text"
       name="genre"
@@ -34,11 +35,31 @@ export const FeedRow: FC<{ feed: Feed }> = ({ feed }) => (
   </li>
 )
 
-/** 登録に成功したときの応答。行を足し、前回の失敗の表示を消す（out-of-band）。 */
+/** 前回の失敗の表示を消す（out-of-band）。 */
+const ClearError: FC = () => <p id="form-error" role="alert" hx-swap-oob="true" />
+
+/** 登録に成功したときの応答。行を足し、前回の失敗の表示を消す。 */
 export const AddedFeed: FC<{ feed: Feed }> = ({ feed }) => (
   <>
     <FeedRow feed={feed} />
-    <p id="form-error" role="alert" hx-swap-oob="true" />
+    <ClearError />
+  </>
+)
+
+/** ジャンル入力の候補。既存の表記を選ばせて、表記ゆれを増やさない（ADR-0011）。 */
+const GenreOptions: FC<{ genres: string[]; oob?: boolean }> = ({ genres, oob }) => (
+  <datalist id="genres" hx-swap-oob={oob ? 'true' : undefined}>
+    {genres.map((g) => (
+      <option value={g} />
+    ))}
+  </datalist>
+)
+
+/** ジャンルの保存に成功したときの応答。候補を今の一覧に入れ替え、前回の失敗の表示を消す。 */
+export const GenreSaved: FC<{ genres: string[] }> = ({ genres }) => (
+  <>
+    <GenreOptions genres={genres} oob />
+    <ClearError />
   </>
 )
 
@@ -65,11 +86,7 @@ export const FeedsPage: FC<{ feeds: Feed[]; genres: string[] }> = ({ feeds, genr
       <button type="submit">登録</button>
     </form>
     <p id="form-error" role="alert" />
-    <datalist id="genres">
-      {genres.map((g) => (
-        <option value={g} />
-      ))}
-    </datalist>
+    <GenreOptions genres={genres} />
     <ul id="feed-list">
       {feeds.map((feed) => (
         <FeedRow feed={feed} />

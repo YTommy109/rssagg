@@ -56,9 +56,17 @@ describe('ジャンルによる選別', () => {
     ])
   })
 
+  it('実在しないジャンルの指定は無視し、何も隠さない', async () => {
+    expect(await titles('?include=&include=gone&exclude=gone')).toStrictEqual([
+      '記事1',
+      '記事2',
+      '記事3',
+    ])
+  })
+
   it('画面からジャンルを設定・変更・解除できる', async () => {
-    const put = (genre: string) =>
-      exports.default.fetch(`${BASE}/settings/feeds/3/genre`, {
+    const put = (id: number, genre: string) =>
+      exports.default.fetch(`${BASE}/settings/feeds/${id}/genre`, {
         method: 'PUT',
         headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ genre }),
@@ -70,21 +78,25 @@ describe('ジャンルによる選別', () => {
         }>()
       )?.genre
 
-    expect((await put('  news ')).status).toBe(204)
+    // 成功したら、候補（datalist）を今の一覧に入れ替える断片を返す。
+    const saved = await put(3, '  news ')
+    expect(saved.status).toBe(200)
+    expect(await saved.text()).toContain('<datalist id="genres" hx-swap-oob="true">')
     expect(await genre()).toBe('news')
     expect(await titles('?exclude=news')).toStrictEqual(['記事1', '記事2'])
 
-    expect((await put('')).status).toBe(204)
+    expect((await put(3, 'web 　 dev')).status).toBe(200)
+    expect(await genre()).toBe('web dev')
+
+    expect((await put(3, '')).status).toBe(200)
     expect(await genre()).toBeNull()
-    expect((await put('x'.repeat(51))).status).toBe(422)
-    expect(
-      (
-        await exports.default.fetch(`${BASE}/settings/feeds/99/genre`, {
-          method: 'PUT',
-          headers: { ...headers, 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ genre: 'a' }),
-        })
-      ).status,
-    ).toBe(404)
+
+    // 失敗の理由は #form-error に出す（入力欄は hx-swap="none" なので、向き先を変えないと見えない）。
+    const tooLong = await put(3, 'x'.repeat(51))
+    expect(tooLong.status).toBe(422)
+    expect(tooLong.headers.get('HX-Retarget')).toBe('#form-error')
+    const gone = await put(99, 'a')
+    expect(gone.status).toBe(404)
+    expect(gone.headers.get('HX-Retarget')).toBe('#form-error')
   })
 })

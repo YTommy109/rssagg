@@ -51,26 +51,24 @@ export async function listRecentArticles(
   db: D1Database,
   filter: GenreFilter,
 ): Promise<ArticleListItem[]> {
-  const conds = ['f.genre IS NULL']
-  const inner: string[] = []
+  const conds: string[] = []
   const params: string[] = []
   if (filter.include.length > 0) {
-    inner.push(`f.genre IN (${marks(filter.include)})`)
+    conds.push(`f.genre IN (${marks(filter.include)})`)
     params.push(...filter.include)
   }
   if (filter.exclude.length > 0) {
-    inner.push(`f.genre NOT IN (${marks(filter.exclude)})`)
+    conds.push(`f.genre NOT IN (${marks(filter.exclude)})`)
     params.push(...filter.exclude)
   }
-  if (inner.length > 0) conds.push(`(${inner.join(' AND ')})`)
-  else conds.push('1')
+  const where = conds.length > 0 ? `WHERE f.genre IS NULL OR (${conds.join(' AND ')})` : ''
 
   const { results } = await db
     .prepare(
       `SELECT a.id, a.url, a.title, f.title AS feed_title, f.url AS feed_url,
               COALESCE(a.published_at, a.fetched_at) AS at
        FROM articles a JOIN feeds f ON f.id = a.feed_id
-       WHERE ${conds.join(' OR ')}
+       ${where}
        ORDER BY at DESC, a.id DESC LIMIT ?`,
     )
     .bind(...params, ARTICLE_LIST_LIMIT)

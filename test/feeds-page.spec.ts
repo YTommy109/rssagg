@@ -104,7 +104,7 @@ describe('/settings/feeds（フィード管理画面）', () => {
     expect(await feeds()).toHaveLength(1)
   })
 
-  it('JWT が無ければ表示・登録・削除のどれも 401', async () => {
+  it('JWT が無ければ表示・登録・ジャンル変更・削除のどれも 401', async () => {
     const statuses = (
       await Promise.all([
         exports.default.fetch(BASE),
@@ -112,10 +112,14 @@ describe('/settings/feeds（フィード管理画面）', () => {
           method: 'POST',
           body: new URLSearchParams({ url: FEED_URL }),
         }),
+        exports.default.fetch(`${BASE}/1/genre`, {
+          method: 'PUT',
+          body: new URLSearchParams({ genre: 'a' }),
+        }),
         exports.default.fetch(`${BASE}/1`, { method: 'DELETE' }),
       ])
     ).map((res) => res.status)
-    expect(statuses).toStrictEqual([401, 401, 401])
+    expect(statuses).toStrictEqual([401, 401, 401, 401])
     expect(await feeds()).toStrictEqual([])
   })
 })
