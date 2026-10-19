@@ -7,7 +7,7 @@
 | # | 題名 | 状態 |
 | --- | --- | --- |
 | [0001](0001-cloudflare-typescript.md) | 実行基盤に Cloudflare と TypeScript を使う | 採用 |
-| [0002](0002-ai-division.md) | AI の分担は Jev（判断）と Workers AI（埋め込み） | 採用 |
+| [0002](0002-ai-division.md) | AI の分担は Jev（判断）と Workers AI（埋め込み） | 置換（0011） |
 | [0003](0003-d1-r2-vectorize.md) | 保存先は D1 / R2 / Vectorize | 採用 |
 | [0004](0004-hono-zod.md) | API は Hono、検証は Zod | 採用 |
 | [0005](0005-cloudflare-access.md) | 認証は Cloudflare Access で自分のメールだけ許可する | 採用 |
@@ -16,6 +16,7 @@
 | [0008](0008-src-layout.md) | src の構成は層別で、単体テストは本体の隣に置く | 採用 |
 | [0009](0009-workers-secrets.md) | Jev の API キーは Workers Secrets に置く | 採用 |
 | [0010](0010-htmx-from-cdn.md) | htmx は CDN から、バージョンを固定して SRI つきで読み込む | 採用 |
+| [0011](0011-ai-scope.md) | AI の使いどころはサイト単位のジャンルを基本にし、Jev は限定した対象だけに使う | 採用 |
 
 ## テンプレート
 

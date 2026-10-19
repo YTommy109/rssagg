@@ -10,12 +10,15 @@
 flowchart LR
   A[フィード登録] --> B[Cron Trigger 1h]
   B --> C[取得・パース]
-  C --> D[重複排除]
-  D --> E[AI による分類]
-  E --> F[(記事ストア)]
-  F --> G[閲覧 UI / フィルタ]
+  C --> D[重複排除: 正規化 URL]
+  D --> F[(記事ストア)]
+  F --> G[閲覧 UI / ジャンルで絞り込み]
   G --> H[後で読む: 保存]
+  G -.限定対象だけ.-> E[Jev による判定]
+  E -.-> F
 ```
+
+選別の基本はフィードに付けたジャンルで、AI は呼ばない。Jev を使うのは、複合的なサイト、手動指定の記事、特定サイトの最近の記事、常に判定が必要と指定したサイトに限る（[ADR-0011](adr/0011-ai-scope.md)）。
 
 ## 構成要素（候補。確定したものから ADR 化する）
 
@@ -25,9 +28,9 @@ flowchart LR
 | 定期実行 | Cron Triggers（毎時、`src/jobs/crawl.ts`） | 採用 |
 | クロールの分散 | 不要（Cron 1 本で並列数を絞る） | 採用 |
 | データベース | D1（[ADR-0003](adr/0003-d1-r2-vectorize.md)） | 採用 |
-| 判断（分類・除外・重複確認） | Jev（[ADR-0002](adr/0002-ai-division.md)） | 採用 |
+| 選別 | フィード単位のジャンル（AI なし）。複合的なサイトなど限定した対象だけ Jev（[ADR-0011](adr/0011-ai-scope.md)） | 採用 |
 | シークレット（Jev の API キー） | Workers Secrets（[ADR-0009](adr/0009-workers-secrets.md)、登録手順は [dev/secrets.md](dev/secrets.md)） | 採用 |
-| 埋め込み | Workers AI + Vectorize | 採用 |
+| 埋め込み | Workers AI + Vectorize | 不採用（[ADR-0011](adr/0011-ai-scope.md)） |
 | アーカイブ保存 | R2（形式は未決） | 採用（形式のみ未決） |
 
 ## ディレクトリ構成
@@ -36,6 +39,6 @@ flowchart LR
 
 ## 未決事項
 
-- 重複判定の方式（URL 正規化、本文ハッシュ、埋め込み類似度）
-- 分類の方式（固定トピック、自由タグ、ユーザー定義）
 - アーカイブ形式
+
+重複判定（正規化 URL のみ）と分類の方式（ユーザー定義のジャンル）は [ADR-0011](adr/0011-ai-scope.md) で決めた。
