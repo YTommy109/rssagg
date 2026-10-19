@@ -1,7 +1,8 @@
 import { type Context, Hono } from 'hono'
 
 import { deleteFeed, insertFeed, listFeeds, listGenres, setFeedGenre } from '../db/feeds'
-import { feedIdSchema, feedUrlSchema, genreSchema } from '../domain/feed-input'
+import { feedUrlSchema, genreSchema } from '../domain/feed-input'
+import { rowIdSchema } from '../domain/row-id'
 import type { AppEnv } from '../env'
 import { AddedFeed, FeedsPage, GenreSaved } from '../views/feeds'
 import { page } from '../views/layout'
@@ -40,7 +41,7 @@ export const feedsPageRoute = new Hono<AppEnv>()
     return c.html(<AddedFeed feed={feed} />, 201)
   })
   .put('/:id/genre', async (c) => {
-    const id = feedIdSchema.safeParse(c.req.param('id'))
+    const id = rowIdSchema.safeParse(c.req.param('id'))
     if (!id.success) return c.text('invalid_id', 400)
     const genre = genreSchema.safeParse((await c.req.parseBody())['genre'])
     if (!genre.success) return reject(c, 422, 'ジャンルは 50 文字以内で入力してください。')
@@ -51,7 +52,7 @@ export const feedsPageRoute = new Hono<AppEnv>()
     return c.html(<GenreSaved genres={await listGenres(c.env.DB)} />)
   })
   .delete('/:id', async (c) => {
-    const id = feedIdSchema.safeParse(c.req.param('id'))
+    const id = rowIdSchema.safeParse(c.req.param('id'))
     if (!id.success) return c.text('invalid_id', 400)
 
     // 別のタブで先に消されていても、画面から行を消せば目的は同じなので、無ければ無いで 200 にする。

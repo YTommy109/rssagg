@@ -21,16 +21,6 @@ export const feedUrlSchema = z
   })
 
 /**
- * パスで受け取るフィード id。正の整数の 10 進表記だけを数値にする。
- *
- * Number() に任せると 1e3 や 0x10 まで整数として通り、別のフィードを消しかねない。
- */
-export const feedIdSchema = z
-  .string()
-  .regex(/^[1-9]\d{0,14}$/u)
-  .transform(Number)
-
-/**
  * ジャンル。前後の空白を除き、空文字は未設定（null）として扱う。
  *
  * 内側の連続する空白（全角を含む）も 1 つに潰す。見た目が同じ「web dev」と「web  dev」が

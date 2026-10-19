@@ -13,8 +13,14 @@ function isHttpUrl(url: string): boolean {
   return URL.canParse(url) && /^https?:$/u.test(new URL(url).protocol)
 }
 
-const ArticleRow: FC<{ article: ArticleListItem }> = ({ article }) => (
-  <li>
+/**
+ * `inSaved` は保存一覧での表示。取り消したら、行を差し替えずに消す（一覧は「保存した記事だけ」のため）。
+ */
+export const ArticleRow: FC<{ article: ArticleListItem; inSaved?: boolean }> = ({
+  article,
+  inSaved,
+}) => (
+  <li id={`article-${article.id}`}>
     {isHttpUrl(article.url) ? (
       <a href={article.url} rel="noopener noreferrer">
         {article.title}
@@ -28,7 +34,27 @@ const ArticleRow: FC<{ article: ArticleListItem }> = ({ article }) => (
       <time datetime={new Date(article.at * 1000).toISOString()}>
         {dateFormat.format(article.at * 1000)}
       </time>
-    </small>
+    </small>{' '}
+    {/* 押すたびに行ごと差し替える。保存済みかどうかは行の表示だけで分かる。 */}
+    {article.saved ? (
+      <button
+        type="button"
+        hx-delete={`/articles/${article.id}/saved`}
+        hx-target="closest li"
+        hx-swap={inSaved === true ? 'delete' : 'outerHTML'}
+      >
+        ★ 保存済み（取り消す）
+      </button>
+    ) : (
+      <button
+        type="button"
+        hx-put={`/articles/${article.id}/saved`}
+        hx-target="closest li"
+        hx-swap="outerHTML"
+      >
+        ☆ 後で読む
+      </button>
+    )}
   </li>
 )
 
@@ -77,6 +103,23 @@ export const ArticlesPage: FC<{
       <ul>
         {articles.map((article) => (
           <ArticleRow article={article} />
+        ))}
+      </ul>
+    )}
+  </section>
+)
+
+export const SavedPage: FC<{ articles: ArticleListItem[] }> = ({ articles }) => (
+  <section>
+    <h1>後で読む</h1>
+    {articles.length === 0 ? (
+      <p>
+        保存した記事はまだありません。<a href="/">記事一覧</a>の「後で読む」で保存できます。
+      </p>
+    ) : (
+      <ul>
+        {articles.map((article) => (
+          <ArticleRow article={article} inSaved />
         ))}
       </ul>
     )}

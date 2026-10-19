@@ -3,6 +3,7 @@ import { Hono } from 'hono'
 import type { AppEnv } from './env'
 import { crawlAll } from './jobs/crawl'
 import { accessMiddleware } from './middleware/access-middleware'
+import { articlesRoute } from './routes/articles'
 import { feedsRoute } from './routes/feeds'
 import { feedsPageRoute } from './routes/feeds-page'
 import { homeRoute } from './routes/home'
@@ -18,6 +19,7 @@ app.use('*', accessMiddleware)
 app.get('/healthz', (c) => c.json({ ok: true }))
 app.route('/', homeRoute)
 app.route('/static', staticRoute)
+app.route('/articles', articlesRoute)
 app.route('/feeds', feedsRoute)
 app.route('/settings/feeds', feedsPageRoute)
 

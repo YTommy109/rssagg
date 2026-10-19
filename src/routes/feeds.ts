@@ -2,7 +2,8 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 
 import { deleteFeed, insertFeed, listFeeds } from '../db/feeds'
-import { feedIdSchema, feedUrlSchema } from '../domain/feed-input'
+import { feedUrlSchema } from '../domain/feed-input'
+import { rowIdSchema } from '../domain/row-id'
 import type { AppEnv } from '../env'
 
 const registerSchema = z.object({ url: feedUrlSchema })
@@ -21,7 +22,7 @@ export const feedsRoute = new Hono<AppEnv>()
     return c.json(feed, 201)
   })
   .delete('/:id', async (c) => {
-    const id = feedIdSchema.safeParse(c.req.param('id'))
+    const id = rowIdSchema.safeParse(c.req.param('id'))
     if (!id.success) return c.json({ error: 'invalid_id' }, 400)
 
     if (!(await deleteFeed(c.env.DB, id.data))) return c.json({ error: 'not_found' }, 404)
