@@ -53,6 +53,20 @@ GitHub のリポジトリ設定では "Allow squash merging" と "Allow rebase m
 - **テスト結果をパイプ越しに判定しない。** `pnpm test | tail -80` の終了コードは `tail` のもので、テストが落ちていても 0 になる。`set -o pipefail` を有効にするか、`pnpm test > log 2>&1; echo $?` のように終了コードを明示的に記録し、あわせて要約行も確認する
 - 要約行だけを目視する運用は、出力が途中で切れていると見落とす。終了コードと要約行の両方を根拠にする
 
+## コミット時のフック（lefthook）
+
+`lefthook.yml` の pre-commit が、**ステージ済みファイルだけ**に次を並列で回す。
+
+- TS/JS: `oxlint --type-aware` と `oxfmt --check`
+- Markdown: `markdownlint-cli2`
+- `dagayn update` と `dagayn detect-changes`（dagayn があるときだけ）
+
+導入は `pnpm install` の `prepare` スクリプト（`lefthook install`）が行う。clone 直後に手動手順は要らない。
+
+- **型チェックとテストは pre-commit に置かない。** 遅く、コミットのたびに待たされると `--no-verify` が常用される。pre-push にも置かず、CI と手元の `pnpm run check` に任せる
+- **CI との役割分担。** フックは手元で最も早く落とすための関門で、迂回できる（`--no-verify`）。CI は迂回できない最終関門で、全ファイルの lint・format・型・テストを回す。フックが通ったことは CI の合格を意味しない
+- **dagayn との共存。** `lefthook install` は既存の `.git/hooks/pre-commit` を `pre-commit.old` に退避して置き換え、`.old` は実行しない。dagayn の pre-commit 相当は `lefthook.yml` の `dagayn` ジョブに移してある。post-commit は lefthook が管理しないので、dagayn のものがそのまま動く。`dagayn` がフックを再インストールして pre-commit を上書きしたら、`pnpm run prepare` で戻す
+
 ## レビュー対応方針
 
 - レビュー・自己チェックで指摘された内容は、同じタスク内で解消する。「次に触るときに」と先送りしない
