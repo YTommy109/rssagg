@@ -19,6 +19,8 @@
   // この値は wrangler dev --remote の zone 解決にも使われるが、remote は使わない（ADR-0007）。
   "dev": { "host": "localhost:8787" },
 
+  "triggers": { "crons": ["0 * * * *"] },
+
   "d1_databases": [
     {
       "binding": "DB",

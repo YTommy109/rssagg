@@ -3,10 +3,12 @@ export type Feed = {
   id: number
   url: string
   title: string | null
+  etag: string | null
+  last_modified: string | null
   created_at: number
 }
 
-const COLUMNS = 'id, url, title, created_at'
+const COLUMNS = 'id, url, title, etag, last_modified, created_at'
 
 /**
  * フィードを登録する。同じ URL が既にあれば登録せず undefined を返す。
@@ -32,6 +34,21 @@ export async function insertFeed(
 export async function listFeeds(db: D1Database): Promise<Feed[]> {
   const { results } = await db.prepare(`SELECT ${COLUMNS} FROM feeds ORDER BY id`).all<Feed>()
   return results
+}
+
+/**
+ * 取得結果でフィードのタイトルと条件付き GET 用ヘッダを更新する文。
+ * 記事の保存と同じ batch に入れるため、実行せず文を返す。
+ */
+export function updateFeedCacheStatement(
+  db: D1Database,
+  feed: Pick<Feed, 'id' | 'title' | 'etag' | 'last_modified'>,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      'UPDATE feeds SET title = COALESCE(?, title), etag = ?, last_modified = ? WHERE id = ?',
+    )
+    .bind(feed.title, feed.etag, feed.last_modified, feed.id)
 }
 
 /** フィードを削除する。記事などの子は外部キーの連鎖削除で消える。無ければ false。 */

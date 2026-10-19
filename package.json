@@ -2,7 +2,9 @@
   "name": "rssagg",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "dev": "wrangler dev",
@@ -20,6 +22,7 @@
     "migrate:list": "wrangler d1 migrations list rssagg --remote"
   },
   "dependencies": {
+    "fast-xml-parser": "^5.11.2",
     "hono": "^4.13.13",
     "zod": "^4.6.7"
   },
