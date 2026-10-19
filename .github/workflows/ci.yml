@@ -28,24 +28,44 @@ jobs:
       - name: 依存をインストールする
         run: pnpm install --frozen-lockfile
 
-      # lint と整形ずれは最も安価に落ちるので先に回す。
-      # lint は型情報を使う（--type-aware）。await し忘れの検出に必要。
-      - name: Oxlint を実行する（type-aware）
-        run: pnpm run lint
+      # ドキュメントや Backlog、Claude の設定だけの変更では、コードの検査を飛ばす。
+      # Markdown の lint は対象が Markdown なので、この判定とは別に毎回回す。
+      # 判定をワークフローの paths-ignore にしないのは、そうすると lint:md まで
+      # 飛んで、Markdown の変更が検査されなくなるため。
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          predicate-quantifier: every
+          filters: |
+            code:
+              - '**'
+              - '!docs/**'
+              - '!backlog/**'
+              - '!.claude/**'
+              - '!**/*.md'
 
       - name: Markdown を lint する
         run: pnpm run lint:md
 
+      # lint と整形ずれは最も安価に落ちるので先に回す。
+      # lint は型情報を使う（--type-aware）。await し忘れの検出に必要。
+      - name: Oxlint を実行する（type-aware）
+        if: steps.changes.outputs.code == 'true'
+        run: pnpm run lint
+
       - name: Oxfmt の整形ずれを検査する
+        if: steps.changes.outputs.code == 'true'
         run: pnpm run format:check
 
       # 型エラーは安価に落ちるのでテストより先に回す
       - name: 型チェックを実行する
+        if: steps.changes.outputs.code == 'true'
         run: pnpm run typecheck
 
       # vitest は @cloudflare/vitest-plugin で workerd を起動し、
       # テスト専用の D1 に migrations/ を適用して実行する
       - name: テストを実行する
+        if: steps.changes.outputs.code == 'true'
         run: pnpm test
 
   # main へのマージで本番へ反映する。手作業では順序を守り続けられないため
