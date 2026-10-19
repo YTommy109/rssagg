@@ -5,8 +5,40 @@ import { decodeFeedBytes, parseFeed } from '../domain/feed-parse'
 /** 同時に取得するフィード数。Workers の同時接続数（6）に収める。 */
 const CONCURRENCY = 6
 
+/** 本文の上限。これを超えるレスポンスはパースせず失敗にする（Worker のメモリは 128MB）。 */
+export const MAX_FEED_BYTES = 5 * 1024 * 1024
+
 /** 1 フィードの取得を打ち切る時間。遅いフィード 1 つで cron 全体が詰まらないようにする。 */
 const FETCH_TIMEOUT_MS = 15_000
+
+/**
+ * 本文を上限付きで読む。Content-Length が上限超なら読まずに打ち切り、
+ * 無い・偽りの場合は読みながらバイト数を数えて、超えた時点で打ち切る。
+ */
+async function readLimited(res: Response, url: string): Promise<Uint8Array> {
+  if (Number(res.headers.get('Content-Length')) > MAX_FEED_BYTES) {
+    await res.body?.cancel()
+    throw new Error(`${url}: Content-Length exceeds ${MAX_FEED_BYTES} bytes`)
+  }
+  const chunks: Uint8Array[] = []
+  let total = 0
+  if (res.body) {
+    for await (const chunk of res.body as AsyncIterable<Uint8Array>) {
+      total += chunk.byteLength
+      // 超えた時点で for await を抜けず throw すると、イテレータが body を cancel する。
+      if (total > MAX_FEED_BYTES)
+        throw new Error(`${url}: response exceeds ${MAX_FEED_BYTES} bytes`)
+      chunks.push(chunk)
+    }
+  }
+  const out = new Uint8Array(total)
+  let offset = 0
+  for (const c of chunks) {
+    out.set(c, offset)
+    offset += c.byteLength
+  }
+  return out
+}
 
 /** 1 フィードを取得して記事を保存する。更新が無ければ（304）本文を取り直さず、何も書かない。 */
 export async function crawlFeed(db: D1Database, feed: Feed, now: number): Promise<void> {
@@ -19,7 +51,7 @@ export async function crawlFeed(db: D1Database, feed: Feed, now: number): Promis
   if (!res.ok) throw new Error(`${feed.url}: HTTP ${res.status}`)
 
   const parsed = parseFeed(
-    decodeFeedBytes(new Uint8Array(await res.arrayBuffer()), res.headers.get('Content-Type')),
+    decodeFeedBytes(await readLimited(res, feed.url), res.headers.get('Content-Type')),
   )
   // etag の更新は記事の保存と同じバッチに入れる。記事が保存されないまま etag だけ進むと、
   // 次回は 304 になって取りこぼした記事が二度と取れない。
