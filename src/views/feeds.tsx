@@ -7,8 +7,8 @@ import type { Feed } from '../db/feeds'
  * 削除は取り込み済みの記事も連鎖して消すため、確認を挟む。
  */
 export const FeedRow: FC<{ feed: Feed }> = ({ feed }) => (
-  <li id={`feed-${feed.id}`}>
-    <span>{feed.title ?? feed.url}</span>{' '}
+  <li id={`feed-${feed.id}`} class="l--flex -g:10 -ai:center">
+    <span>{feed.title ?? feed.url}</span>
     {/* 変更したら送る。空にすると未設定に戻り、記事一覧の絞り込みの対象外になる。
         応答の本体は使わず、候補（#genres）と失敗表示（#form-error）を out-of-band で受け取る。 */}
     <input
@@ -22,7 +22,7 @@ export const FeedRow: FC<{ feed: Feed }> = ({ feed }) => (
       hx-put={`/settings/feeds/${feed.id}/genre`}
       hx-trigger="change"
       hx-swap="none"
-    />{' '}
+    />
     <button
       type="button"
       hx-delete={`/settings/feeds/${feed.id}`}
@@ -64,11 +64,12 @@ export const GenreSaved: FC<{ genres: string[] }> = ({ genres }) => (
 )
 
 export const FeedsPage: FC<{ feeds: Feed[]; genres: string[] }> = ({ feeds, genres }) => (
-  <section>
+  <section class="l--stack -g:20">
     <h1>フィード</h1>
     {/* 入力の検証は常にサーバーが行い、理由を #form-error に出す。type="url" にしないのは、
         ブラウザの検証が先に働いて、サーバー側の理由（http/https のみなど）が出なくなるため。 */}
     <form
+      class="l--flex -g:10"
       hx-post="/settings/feeds"
       hx-target="#feed-list"
       hx-swap="beforeend"
@@ -82,12 +83,12 @@ export const FeedsPage: FC<{ feeds: Feed[]; genres: string[] }> = ({ feeds, genr
         required
         placeholder="https://example.com/feed.xml"
         size={48}
-      />{' '}
+      />
       <button type="submit">登録</button>
     </form>
     <p id="form-error" role="alert" />
     <GenreOptions genres={genres} />
-    <ul id="feed-list">
+    <ul id="feed-list" class="l--stack -g:10">
       {feeds.map((feed) => (
         <FeedRow feed={feed} />
       ))}

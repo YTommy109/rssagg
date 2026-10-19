@@ -14,22 +14,35 @@ describe('画面の土台', () => {
   })
   afterEach(removeAccessKeys)
 
-  it('/ は doctype つきの HTML で、版を固定した htmx を SRI つきで読み込み、フィード管理へのリンクを持つ', async () => {
+  it('/ は doctype つきの HTML で、同梱した htmx と CSS を同一オリジンから読み込み、フィード管理へのリンクを持つ', async () => {
     const res = await exports.default.fetch(`${BASE}/`, { headers })
     expect(res.status).toBe(200)
     expect(res.headers.get('Content-Type')).toContain('text/html')
 
     const body = await res.text()
     expect(body.startsWith('<!DOCTYPE html>')).toBe(true)
-    // 定数をそのまま突き合わせると、@latest や空の integrity にしても通ってしまう。
-    // 「版が数字で固定されている」「SRI が sha384 の形をしている」という不変条件で見る。
-    expect(body).toMatch(
-      /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/htmx\.org@\d+\.\d+\.\d+\/dist\/htmx\.min\.js" integrity="sha384-[A-Za-z0-9+/]{64}" crossorigin="anonymous"/u,
-    )
+    // ADR-0013: CDN ではなく同一オリジンから読み込む。
+    expect(body).toMatch(/<script src="\/static\/htmx\.js" defer/u)
+    expect(body).toContain('<link rel="stylesheet" href="/static/lism.css"')
+    expect(body).not.toContain('cdn.jsdelivr.net')
     expect(body).toContain('href="/settings/feeds"')
     // 404/409/422 を差し替えつつ error にする設定が落ちると、失敗の理由が出なくなるか、失敗なのに入力欄が消える。
     expect(body).toContain('name="htmx-config"')
     expect(body).toContain('404|409|422&quot;,&quot;swap&quot;:true,&quot;error&quot;:true')
+  })
+
+  it('同梱した htmx と Lism CSS を配信し、JWT が無ければ 401', async () => {
+    const js = await exports.default.fetch(`${BASE}/static/htmx.js`, { headers })
+    expect(js.status).toBe(200)
+    expect(js.headers.get('Content-Type')).toContain('text/javascript')
+    expect(await js.text()).toContain('htmx')
+
+    const css = await exports.default.fetch(`${BASE}/static/lism.css`, { headers })
+    expect(css.status).toBe(200)
+    expect(css.headers.get('Content-Type')).toContain('text/css')
+    expect(await css.text()).toContain('@layer')
+
+    expect((await exports.default.fetch(`${BASE}/static/htmx.js`)).status).toBe(401)
   })
 
   it('JWT が無ければ 401', async () => {

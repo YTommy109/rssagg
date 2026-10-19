@@ -6,6 +6,7 @@ import { accessMiddleware } from './middleware/access-middleware'
 import { feedsRoute } from './routes/feeds'
 import { feedsPageRoute } from './routes/feeds-page'
 import { homeRoute } from './routes/home'
+import { staticRoute } from './routes/static'
 
 const app = new Hono<AppEnv>()
 
@@ -16,6 +17,7 @@ app.use('*', accessMiddleware)
 
 app.get('/healthz', (c) => c.json({ ok: true }))
 app.route('/', homeRoute)
+app.route('/static', staticRoute)
 app.route('/feeds', feedsRoute)
 app.route('/settings/feeds', feedsPageRoute)
 

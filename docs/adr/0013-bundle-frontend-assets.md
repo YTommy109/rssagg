@@ -35,3 +35,10 @@
 - htmx の版を上げるときは `package.json` を更新する。`layout.tsx` の URL と SRI の同時更新は不要になる。
 - 初回の読み込みが Worker 経由になる。利用者は 1 人で、影響は無視できる。
 - `layout.tsx` は ADR-0010 のままなので、この ADR に合わせた実装は別タスクで行う。
+
+## 実装で確定したこと（TASK-28）
+
+- 同梱方法は wrangler の `rules`（`Text`）で `htmx.org/dist/htmx.min.js` と `lism-css/main.css` を文字列として import し、`/static/htmx.js` と `/static/lism.css` を Hono のルートから返す。`assets` バインディングは使わない。
+- ルートは `accessMiddleware` の配下にあるので、Access の検証が静的ファイルにも効く。`run_worker_first` の設定は要らない。
+- `rules` の glob は、解決後のパスではなく import の指定子と照合される。`**/` で始めると一致せず、`wrangler dev` が htmx を JS として束ねて起動に失敗した。vitest は逆に解決後のパスと照合するため、CSS には `**/lism-css/dist/css/main.css` も並べている（無いと CSS が空文字列になる）。
+- 版は `htmx.org@2.0.11`、`lism-css@1.0.1`（どちらも `package.json` で完全固定）。
