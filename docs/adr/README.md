@@ -19,6 +19,7 @@
 | [0011](0011-ai-scope.md) | AI の使いどころはサイト単位のジャンルを基本にし、Jev は限定した対象だけに使う | 採用 |
 | [0012](0012-lism-css.md) | CSS の設計は Lism CSS に準拠する | 採用 |
 | [0013](0013-bundle-frontend-assets.md) | htmx と CSS は Worker に同梱して同一オリジンから配信する | 採用 |
+| [0014](0014-archive-format.md) | アーカイブは本文を Markdown で R2 に保存する | 採用 |
 
 ## テンプレート
 
