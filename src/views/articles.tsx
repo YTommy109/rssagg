@@ -32,9 +32,42 @@ const ArticleRow: FC<{ article: ArticleListItem }> = ({ article }) => (
   </li>
 )
 
-export const ArticlesPage: FC<{ articles: ArticleListItem[] }> = ({ articles }) => (
+const GenreChecks: FC<{ name: string; genres: string[]; checked: string[] }> = ({
+  name,
+  genres,
+  checked,
+}) => (
+  <>
+    {genres.map((g) => (
+      <label>
+        <input type="checkbox" name={name} value={g} checked={checked.includes(g)} /> {g}
+      </label>
+    ))}
+  </>
+)
+
+export const ArticlesPage: FC<{
+  articles: ArticleListItem[]
+  genres: string[]
+  include: string[]
+  exclude: string[]
+}> = ({ articles, genres, include, exclude }) => (
   <section>
     <h1>記事</h1>
+    {genres.length > 0 && (
+      <form method="get" action="/">
+        <fieldset>
+          <legend>含める（未選択は全部）</legend>
+          <GenreChecks name="include" genres={genres} checked={include} />
+        </fieldset>
+        <fieldset>
+          <legend>除く</legend>
+          <GenreChecks name="exclude" genres={genres} checked={exclude} />
+        </fieldset>
+        <button type="submit">絞り込む</button>{' '}
+        <small>ジャンル未設定のフィードの記事は、絞り込んでも隠れません。</small>
+      </form>
+    )}
     {articles.length === 0 ? (
       <p>
         記事はまだありません。<a href="/settings/feeds">フィード</a>

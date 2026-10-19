@@ -8,6 +8,8 @@ CREATE TABLE feeds (
   -- 条件付き GET 用。次回の取得で If-None-Match / If-Modified-Since に使い、更新が無ければ本文を取り直さない。
   etag TEXT,
   last_modified TEXT,
+  -- ユーザー定義の自由文字列（ADR-0011）。NULL は未設定で、記事一覧の絞り込みの対象外（記事は隠さない）。
+  genre TEXT,
   created_at INTEGER NOT NULL
 );
 

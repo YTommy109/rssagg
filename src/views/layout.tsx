@@ -5,13 +5,14 @@ import type { Child, FC, PropsWithChildren } from 'hono/jsx'
 const HTMX_URL = 'https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js'
 const HTMX_INTEGRITY = 'sha384-2OatzQy1H+Zd/IIrjr1TcuDGqLXeHhbooAyJY1KdQMKnr4LZ22k31GBLdYKHmVjg'
 
-// htmx は既定で 4xx/5xx を差し替えない。登録の失敗（422 不正・409 重複）は理由を画面に出したいので、
-// この 2 つだけ差し替える。error を立てるのは、失敗なのに successful になって入力欄が消えるのを防ぐため。それ以外の 4xx/5xx は、エラー文が一覧などに混ざらないよう差し替えない。
+// htmx は既定で 4xx/5xx を差し替えない。登録・ジャンル変更の失敗（422 不正・409 重複・404 消えたフィード）は
+// 理由を画面に出したいので、この 3 つだけ差し替える。error を立てるのは、失敗なのに successful になって
+// 入力欄が消えるのを防ぐため。それ以外の 4xx/5xx は、エラー文が一覧などに混ざらないよう差し替えない。
 const HTMX_CONFIG = JSON.stringify({
   responseHandling: [
     { code: '204', swap: false },
     { code: '[23]..', swap: true },
-    { code: '409|422', swap: true, error: true },
+    { code: '404|409|422', swap: true, error: true },
     { code: '[45]..', swap: false, error: true },
   ],
 })

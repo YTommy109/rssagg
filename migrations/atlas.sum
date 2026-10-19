@@ -1,4 +1,5 @@
-h1:ZJZKGKu5eGPy4uSzOM4pHlEjTumi0gYrghJX/z1Cxeg=
+h1:KXvyV54F0/WlQVmOtZchi1tIZuch+bf9N2y7ICldXlY=
 20261017120421_initial.sql h1:QF704EFKoOvUR9Ck9fBSCLubnD/fKjsVmeypoesMIVw=
 20261018144605_add_feed_cache_headers.sql h1:sIWnHP2K8tCBAc+X1/zndh+ztO3LFD2gx3JHKUBk8D8=
 20261019010426_add_articles_url_unique.sql h1:LutrlDyApgHUEAwsV4wRsHVfJp7RUUT2jX7xIEs8yb4=
+20261019051159_add_feeds_genre.sql h1:wOq1kvEAtdNSDwGMw+0fWN6zCdypBAy0NAdV1uZbS9U=

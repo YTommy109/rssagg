@@ -27,9 +27,9 @@ describe('画面の土台', () => {
       /<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/htmx\.org@\d+\.\d+\.\d+\/dist\/htmx\.min\.js" integrity="sha384-[A-Za-z0-9+/]{64}" crossorigin="anonymous"/u,
     )
     expect(body).toContain('href="/settings/feeds"')
-    // 409/422 を差し替えつつ error にする設定が落ちると、失敗の理由が出なくなるか、失敗なのに入力欄が消える。
+    // 404/409/422 を差し替えつつ error にする設定が落ちると、失敗の理由が出なくなるか、失敗なのに入力欄が消える。
     expect(body).toContain('name="htmx-config"')
-    expect(body).toContain('409|422&quot;,&quot;swap&quot;:true,&quot;error&quot;:true')
+    expect(body).toContain('404|409|422&quot;,&quot;swap&quot;:true,&quot;error&quot;:true')
   })
 
   it('JWT が無ければ 401', async () => {
