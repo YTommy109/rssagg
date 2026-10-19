@@ -31,7 +31,19 @@ export type ArticleListItem = {
   feed_url: string
   /** 公開日時。無いフィードは取得日時で代用済み。 */
   at: number
+  /** 「後で読む」に入っていれば true。 */
+  saved: boolean
 }
+
+/** D1 は真偽値を 0/1 で返すので、境界でここだけ boolean にする。 */
+type ArticleRow = Omit<ArticleListItem, 'saved'> & { saved: number }
+const toItem = (r: ArticleRow): ArticleListItem => ({ ...r, saved: r.saved === 1 })
+
+const SELECT_ARTICLE = `SELECT a.id, a.url, a.title, f.title AS feed_title, f.url AS feed_url,
+              COALESCE(a.published_at, a.fetched_at) AS at,
+              sv.article_id IS NOT NULL AS saved
+       FROM articles a JOIN feeds f ON f.id = a.feed_id
+       LEFT JOIN saved sv ON sv.article_id = a.id`
 
 /** 一覧の上限。続きの読み込みは扱わない。 */
 export const ARTICLE_LIST_LIMIT = 50
@@ -65,13 +77,48 @@ export async function listRecentArticles(
 
   const { results } = await db
     .prepare(
-      `SELECT a.id, a.url, a.title, f.title AS feed_title, f.url AS feed_url,
-              COALESCE(a.published_at, a.fetched_at) AS at
-       FROM articles a JOIN feeds f ON f.id = a.feed_id
+      `${SELECT_ARTICLE}
        ${where}
        ORDER BY at DESC, a.id DESC LIMIT ?`,
     )
     .bind(...params, ARTICLE_LIST_LIMIT)
-    .all<ArticleListItem>()
-  return results
+    .all<ArticleRow>()
+  return results.map((r) => toItem(r))
+}
+
+/**
+ * 保存した記事を、保存した新しい順に返す。件数は絞らない。流れてくる記事と違い、自分で残した
+ * ものなので、古い順に見えなくなると取り消すことすらできなくなる。
+ */
+export async function listSavedArticles(db: D1Database): Promise<ArticleListItem[]> {
+  const { results } = await db
+    .prepare(
+      `${SELECT_ARTICLE} WHERE sv.article_id IS NOT NULL
+       ORDER BY sv.saved_at DESC, a.id DESC`,
+    )
+    .all<ArticleRow>()
+  return results.map((r) => toItem(r))
+}
+
+/** 記事 1 件。無ければ undefined。 */
+export async function getArticle(db: D1Database, id: number): Promise<ArticleListItem | undefined> {
+  const row = await db.prepare(`${SELECT_ARTICLE} WHERE a.id = ?`).bind(id).first<ArticleRow>()
+  return row === null ? undefined : toItem(row)
+}
+
+/**
+ * 「後で読む」に入れる。全文の保存は扱わないので archive_key は NULL のまま。
+ * 記事が無ければ何もしない（外部キー違反にせず、呼び出し側が getArticle で確かめる）。
+ */
+export async function saveArticle(db: D1Database, id: number, now: number): Promise<void> {
+  await db
+    .prepare(
+      'INSERT INTO saved (article_id, saved_at) SELECT id, ? FROM articles WHERE id = ? ON CONFLICT DO NOTHING',
+    )
+    .bind(now, id)
+    .run()
+}
+
+export async function unsaveArticle(db: D1Database, id: number): Promise<void> {
+  await db.prepare('DELETE FROM saved WHERE article_id = ?').bind(id).run()
 }

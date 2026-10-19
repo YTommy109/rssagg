@@ -36,7 +36,7 @@ const Layout: FC<PropsWithChildren<{ title: string }>> = ({ title, children }) =
           <a href="/">rssagg</a>
         </strong>{' '}
         <nav style="display: inline">
-          <a href="/settings/feeds">フィード</a>
+          <a href="/articles/saved">後で読む</a> <a href="/settings/feeds">フィード</a>
         </nav>
       </header>
       <main>{children}</main>
