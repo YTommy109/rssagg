@@ -25,6 +25,8 @@
   "dependencies": {
     "fast-xml-parser": "^5.11.2",
     "hono": "^4.13.13",
+    "htmx.org": "2.0.11",
+    "lism-css": "1.0.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

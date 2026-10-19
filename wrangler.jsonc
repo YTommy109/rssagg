@@ -19,6 +19,18 @@
   // この値は wrangler dev --remote の zone 解決にも使われるが、remote は使わない（ADR-0007）。
   "dev": { "host": "localhost:8787" },
 
+  // ADR-0013: htmx と Lism CSS を Worker に同梱する。Text として取り込むファイルを指定する。
+  // glob は解決後のパスではなく import の指定子（src/routes/static.ts）と照合される。
+  // 3 つ目は vitest 用で、あちらは解決後のパスと照合される（無いと CSS が空文字列になる）。
+  // **/*.js のように広く指定すると、依存の JS まで文字列になって壊れる。
+  "rules": [
+    { "type": "Text", "globs": [
+        "htmx.org/dist/htmx.min.js",
+        "lism-css/main.css",
+        "**/lism-css/dist/css/main.css",
+      ], "fallthrough": false },
+  ],
+
   "triggers": { "crons": ["0 * * * *"] },
 
   "d1_databases": [

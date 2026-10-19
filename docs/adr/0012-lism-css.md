@@ -46,3 +46,8 @@
 - Lism は 0.x 系で、版を上げるときに破壊的変更がありうる。版は `package.json` で固定し、上げるときは画面を目視で確認する。
 - CSS は Worker から返すので、Access の前段を通る。オフラインでも、Worker に届くなら見た目は崩れない。
 - 未検証: CSS を Worker に同梱する方法（wrangler の `rules` で `.css` をテキストとして import する案、`assets` バインディングの案）と、vitest 側の設定。CSS のサイズ。最初の画面に当てるときに検証し、必要なら追記ではなく新しい ADR で置換する。
+
+## 実装で確定したこと（TASK-28）
+
+- 導入した版は `lism-css@1.0.1`。独自クラスを置くレイヤー名は `lism-custom`（`lism-css-guide` スキルの `lism-component` は 0.16 時点の名前）。`.c--*` を書くときは同梱した CSS の `@layer` 宣言で名前を確かめる。
+- 配信方法は [ADR-0013](0013-bundle-frontend-assets.md) に記した。

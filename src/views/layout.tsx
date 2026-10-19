@@ -1,10 +1,6 @@
 import { html } from 'hono/html'
 import type { Child, FC, PropsWithChildren } from 'hono/jsx'
 
-// ADR-0010: 版を固定して SRI で検証する。版を上げるときは URL と SRI を同時に更新する。
-const HTMX_URL = 'https://cdn.jsdelivr.net/npm/htmx.org@2.0.11/dist/htmx.min.js'
-const HTMX_INTEGRITY = 'sha384-2OatzQy1H+Zd/IIrjr1TcuDGqLXeHhbooAyJY1KdQMKnr4LZ22k31GBLdYKHmVjg'
-
 // htmx は既定で 4xx/5xx を差し替えない。登録・ジャンル変更の失敗（422 不正・409 重複・404 消えたフィード）は
 // 理由を画面に出したいので、この 3 つだけ差し替える。error を立てるのは、失敗なのに successful になって
 // 入力欄が消えるのを防ぐため。それ以外の 4xx/5xx は、エラー文が一覧などに混ざらないよう差し替えない。
@@ -31,7 +27,8 @@ const Layout: FC<PropsWithChildren<{ title: string }>> = ({ title, children }) =
       <title>{title}</title>
       <meta name="htmx-config" content={HTMX_CONFIG} />
       <style dangerouslySetInnerHTML={{ __html: EMPTY_LIST_CSS }} />
-      <script src={HTMX_URL} integrity={HTMX_INTEGRITY} crossorigin="anonymous" defer />
+      <link rel="stylesheet" href="/static/lism.css" />
+      <script src="/static/htmx.js" defer />
     </head>
     <body>
       <header>
