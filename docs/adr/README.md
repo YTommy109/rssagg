@@ -20,6 +20,7 @@
 | [0012](0012-lism-css.md) | CSS の設計は Lism CSS に準拠する | 採用 |
 | [0013](0013-bundle-frontend-assets.md) | htmx と CSS は Worker に同梱して同一オリジンから配信する | 採用 |
 | [0014](0014-archive-format.md) | アーカイブは本文を Markdown で R2 に保存する | 採用 |
+| [0015](0015-judgment-none.md) | Jev が「該当なし」と答えた記事は、該当なしとして保存して判定済みにする | 採用 |
 
 ## テンプレート
 

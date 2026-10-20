@@ -7,7 +7,9 @@ import { installAccessKeys, removeAccessKeys } from './access-helpers'
 
 const NOW = 1_800_000_000
 
-const jevOk = () =>
+const TECH = { tech: 0.8, sports: 0.1, 該当なし: 0.1 }
+
+const jevOk = (probabilities: Record<string, number> = TECH) =>
   new Response(
     JSON.stringify({
       model: 'jev-1',
@@ -15,7 +17,7 @@ const jevOk = () =>
         genre: {
           type: 'choice',
           choice: 'tech',
-          probabilities: { tech: 0.8, sports: 0.1, 該当なし: 0.1 },
+          probabilities,
           confidence: 0.9,
         },
       },
@@ -64,6 +66,14 @@ describe('記事ごとの判定（クロール時）', () => {
     const fetchMock = mockFetch(jevOk)
     await judgePending({ db: env.DB, apiKey: 'k' }, NOW)
     expect(await judgedIds()).toStrictEqual([1])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('「該当なし」が最大の記事は判定済みになり、次の周期で選ばれない', async () => {
+    const fetchMock = mockFetch(() => jevOk({ 該当なし: 0.9, tech: 0.06, sports: 0.04 }))
+    await judgePending({ db: env.DB, apiKey: 'k' }, NOW)
+    expect(await judgedIds()).toStrictEqual([1])
+    expect((await judgePending({ db: env.DB, apiKey: 'k' }, NOW)).judged).toStrictEqual([])
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 

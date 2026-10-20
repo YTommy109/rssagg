@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
 import { z } from 'zod'
 
+import { listRecentArticles } from '../src/db/articles'
 import { judgeArticles } from '../src/jobs/judge'
 
 const NOW = 1_800_000_000
@@ -79,10 +80,11 @@ describe('judgeArticles', () => {
     expect(result).toStrictEqual({ skipped: false, judged: [1], failed: [3] })
     expect(spy).toHaveBeenCalledTimes(2)
 
-    // 「該当なし」は保存しない。判定済みの記事 2 はそのまま。
+    // 「該当なし」も他のジャンルと同じく保存する。判定済みの記事 2 はそのまま。
     expect(await rows()).toStrictEqual([
       { article_id: 1, topic: 'sports', score: 0.2, judged_at: NOW },
       { article_id: 1, topic: 'tech', score: 0.7, judged_at: NOW },
+      { article_id: 1, topic: '該当なし', score: 0.1, judged_at: NOW },
       { article_id: 2, topic: 'sports', score: 1, judged_at: 1 },
     ])
 
@@ -90,6 +92,25 @@ describe('judgeArticles', () => {
     const body = sent(spy.mock.calls[0]?.[1])
     expect(body.state).toStrictEqual({ title: 'A', excerpt: 'a' })
     expect(Object.keys(body.questions.genre.criteria)).toStrictEqual(['sports', 'tech', '該当なし'])
+  })
+
+  it('「該当なし」が最大の記事は該当なしとして残り、低いジャンルで一覧に出ず、再判定もしない', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify(choice({ 該当なし: 0.9, tech: 0.06, sports: 0.04 }))),
+      )
+    const deps = { db: env.DB, apiKey: 'key' }
+    const input = { articles: ARTICLES.slice(0, 1), genres: GENRES, now: NOW }
+    expect((await judgeArticles(deps, input)).judged).toStrictEqual([1])
+
+    const shown = async (include: string[]) =>
+      (await listRecentArticles(env.DB, { include, exclude: [] })).find((a) => a.id === 1)
+    expect(await shown(['tech'])).toBeUndefined()
+    expect(await shown([])).toMatchObject({ judged_genre: '該当なし', judged_score: 0.9 })
+
+    expect((await judgeArticles(deps, input)).judged).toStrictEqual([])
+    expect(spy).toHaveBeenCalledTimes(1)
   })
 
   it('API キーが空か未登録なら警告を出して判定を飛ばし、Jev を呼ばない', async () => {
