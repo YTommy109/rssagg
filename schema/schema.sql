@@ -28,6 +28,9 @@ CREATE TABLE articles (
   published_at INTEGER,
   fetched_at INTEGER NOT NULL,
   read_at INTEGER,
+  -- クロール後の判定（judgePending）が続けて失敗した回数と、最後に失敗した時刻。失敗した記事は間隔を空けて再試行する。
+  judge_failures INTEGER NOT NULL DEFAULT 0,
+  judge_failed_at INTEGER,
   UNIQUE (feed_id, guid)
 );
 
