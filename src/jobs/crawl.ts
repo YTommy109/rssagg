@@ -2,6 +2,7 @@ import { insertArticleStatements } from '../db/articles'
 import { type Feed, listFeeds, updateFeedCacheStatement } from '../db/feeds'
 import { feedUrlSchema } from '../domain/feed-input'
 import { decodeFeedBytes, type ParsedFeed, parseFeed } from '../domain/feed-parse'
+import { judgePending } from './judge'
 
 /** 同時に取得するフィード数。Workers の同時接続数（6）に収める。 */
 const CONCURRENCY = 6
@@ -138,9 +139,13 @@ export async function crawlFeed(db: D1Database, feed: Feed, now: number): Promis
 
 /**
  * 登録済みの全フィードを取得する。失敗したフィードは数えて報告するだけで、残りは続ける。
- * 同時実行数は CONCURRENCY までに絞る。
+ * 同時実行数は CONCURRENCY までに絞る。取得の後、判定対象のフィードの未判定の記事を Jev で判定する。
  */
-export async function crawlAll(db: D1Database, now: number): Promise<{ failed: string[] }> {
+export async function crawlAll(
+  db: D1Database,
+  now: number,
+  apiKey?: string,
+): Promise<{ failed: string[] }> {
   const feeds = await listFeeds(db)
   const failed: string[] = []
   // 並列数を絞るため、CONCURRENCY 件ずつ取得する。
@@ -156,6 +161,12 @@ export async function crawlAll(db: D1Database, now: number): Promise<{ failed: s
         }
       }),
     )
+  }
+  // 判定の失敗は取り込みに影響させない。未判定のまま残り、次の周期で再試行される。
+  try {
+    await judgePending({ db, apiKey }, now)
+  } catch (error) {
+    console.error('judge pending failed', error)
   }
   return { failed }
 }

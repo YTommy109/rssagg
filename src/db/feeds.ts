@@ -7,10 +7,12 @@ export type Feed = {
   last_modified: string | null
   /** ユーザー定義のジャンル。NULL は未設定。 */
   genre: string | null
+  /** 1 ならクロール時に新着記事を Jev で判定する。 */
+  judge_each: number
   created_at: number
 }
 
-const COLUMNS = 'id, url, title, etag, last_modified, genre, created_at'
+const COLUMNS = 'id, url, title, etag, last_modified, genre, judge_each, created_at'
 
 /**
  * フィードを登録する。同じ URL が既にあれば登録せず undefined を返す。
@@ -72,6 +74,15 @@ export async function setFeedGenre(
   genre: string | null,
 ): Promise<boolean> {
   const { meta } = await db.prepare('UPDATE feeds SET genre = ? WHERE id = ?').bind(genre, id).run()
+  return meta.changes > 0
+}
+
+/** 「記事ごとに判定する」を設定する。フィードが無ければ false。 */
+export async function setFeedJudgeEach(db: D1Database, id: number, on: boolean): Promise<boolean> {
+  const { meta } = await db
+    .prepare('UPDATE feeds SET judge_each = ? WHERE id = ?')
+    .bind(on ? 1 : 0, id)
+    .run()
   return meta.changes > 0
 }
 

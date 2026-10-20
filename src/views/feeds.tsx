@@ -3,6 +3,21 @@ import type { FC } from 'hono/jsx'
 import type { Feed } from '../db/feeds'
 import type { FeedCandidate } from '../domain/feed-discover'
 
+/** 新着記事をクロール時に Jev で判定する。ジャンルが混ざるサイトや常時判定したいサイト向け。 */
+const JudgeEachToggle: FC<{ feed: Feed }> = ({ feed }) => (
+  <label>
+    <input
+      type="checkbox"
+      name="judge_each"
+      checked={feed.judge_each === 1}
+      hx-put={`/settings/feeds/${feed.id}/judge-each`}
+      hx-trigger="change"
+      hx-swap="none"
+    />
+    記事ごとに判定
+  </label>
+)
+
 /**
  * 一覧の 1 行。登録の応答でもそのまま返し、htmx が一覧の末尾へ足す。
  * 削除は取り込み済みの記事も連鎖して消すため、確認を挟む。
@@ -28,6 +43,7 @@ export const FeedRow: FC<{ feed: Feed; oob?: boolean }> = ({ feed, oob }) => (
       hx-trigger="change"
       hx-swap="none"
     />
+    <JudgeEachToggle feed={feed} />
     {/* 結果は行の差し替えと #fetch-status・#form-error で受け取る。二重に押せないよう、実行中は無効にする。 */}
     <button
       type="button"

@@ -1,5 +1,6 @@
-h1:KXvyV54F0/WlQVmOtZchi1tIZuch+bf9N2y7ICldXlY=
+h1:Qg8c96QEJaG+Np+D7FRYYu6mW7phrEEQ2QVH9xhlgUg=
 20261017120421_initial.sql h1:QF704EFKoOvUR9Ck9fBSCLubnD/fKjsVmeypoesMIVw=
 20261018144605_add_feed_cache_headers.sql h1:sIWnHP2K8tCBAc+X1/zndh+ztO3LFD2gx3JHKUBk8D8=
 20261019010426_add_articles_url_unique.sql h1:LutrlDyApgHUEAwsV4wRsHVfJp7RUUT2jX7xIEs8yb4=
 20261019051159_add_feeds_genre.sql h1:wOq1kvEAtdNSDwGMw+0fWN6zCdypBAy0NAdV1uZbS9U=
+20261020122854_add_feeds_judge_each.sql h1:ff3GmdXtNIWSt5dxqOhYD0LMoGw3TtNpr/XxpkXIHmg=
