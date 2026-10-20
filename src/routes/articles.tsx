@@ -1,8 +1,16 @@
 import { type Context, Hono } from 'hono'
 
-import { getArticle, listSavedArticles, saveArticle, unsaveArticle } from '../db/articles'
+import {
+  getArticle,
+  getJudgeTarget,
+  listSavedArticles,
+  saveArticle,
+  unsaveArticle,
+} from '../db/articles'
+import { listGenres } from '../db/feeds'
 import { rowIdSchema } from '../domain/row-id'
 import type { AppEnv } from '../env'
+import { judgeArticles } from '../jobs/judge'
 import { ArticleRow, SavedPage } from '../views/articles'
 import { page } from '../views/layout'
 
@@ -32,4 +40,36 @@ export const articlesRoute = new Hono<AppEnv>()
   .put('/:id/saved', (c) =>
     respondWithRow(c, (id) => saveArticle(c.env.DB, id, Math.floor(Date.now() / 1000))),
   )
+  // 手動で指定した記事だけを Jev で判定する（ADR-0011）。判定済みなら judgeArticles が呼ばずに飛ばす。
+  .post('/:id/judgment', async (c) => {
+    const id = rowIdSchema.safeParse(c.req.param('id'))
+    if (!id.success) return c.text('invalid_id', 400)
+
+    const target = await getJudgeTarget(c.env.DB, id.data)
+    if (target === undefined) return c.body(null, 200)
+    const genres = await listGenres(c.env.DB)
+    // ジャンルが無いと問う選択肢が無い。失敗ではなく設定の不足なので、別の案内を出す。
+    const r =
+      genres.length === 0
+        ? undefined
+        : await judgeArticles(
+            { db: c.env.DB, apiKey: c.env.JEV_API_KEY },
+            { articles: [target], genres, now: Math.floor(Date.now() / 1000) },
+          )
+    const article = await getArticle(c.env.DB, id.data)
+    return article === undefined
+      ? c.body(null, 200)
+      : c.html(
+          <ArticleRow
+            article={article}
+            judge={
+              r === undefined
+                ? 'no_genres'
+                : r.skipped || r.failed.length > 0
+                  ? 'failed'
+                  : undefined
+            }
+          />,
+        )
+  })
   .delete('/:id/saved', (c) => respondWithRow(c, (id) => unsaveArticle(c.env.DB, id)))
