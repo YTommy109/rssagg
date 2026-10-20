@@ -33,6 +33,10 @@ export type ArticleListItem = {
   at: number
   /** 「後で読む」に入っていれば true。 */
   saved: boolean
+  /** 記事単位の Jev 判定で最も確率が高かったジャンル。未判定は null。 */
+  judged_genre: string | null
+  /** judged_genre の確率（0〜1）。 */
+  judged_score: number | null
 }
 
 /** D1 は真偽値を 0/1 で返すので、境界でここだけ boolean にする。 */
@@ -41,9 +45,12 @@ const toItem = (r: ArticleRow): ArticleListItem => ({ ...r, saved: r.saved === 1
 
 const SELECT_ARTICLE = `SELECT a.id, a.url, a.title, f.title AS feed_title, f.url AS feed_url,
               COALESCE(a.published_at, a.fetched_at) AS at,
-              sv.article_id IS NOT NULL AS saved
+              sv.article_id IS NOT NULL AS saved,
+              j.topic AS judged_genre, j.score AS judged_score
        FROM articles a JOIN feeds f ON f.id = a.feed_id
-       LEFT JOIN saved sv ON sv.article_id = a.id`
+       LEFT JOIN saved sv ON sv.article_id = a.id
+       LEFT JOIN (SELECT article_id, topic, MAX(score) AS score FROM judgments GROUP BY article_id) j
+         ON j.article_id = a.id`
 
 /** 一覧の上限。続きの読み込みは扱わない。 */
 export const ARTICLE_LIST_LIMIT = 50
@@ -58,6 +65,7 @@ export type GenreFilter = { include: string[]; exclude: string[] }
  *
  * ジャンル未設定のフィードの記事は、include / exclude のどちらでも隠さない（ADR-0011）。
  * include が空なら全ジャンルを通し、exclude は include より優先する。
+ * 記事単位の判定があればサイト単位のジャンルより優先する（ADR-0011）。
  */
 export async function listRecentArticles(
   db: D1Database,
@@ -66,14 +74,15 @@ export async function listRecentArticles(
   const conds: string[] = []
   const params: string[] = []
   if (filter.include.length > 0) {
-    conds.push(`f.genre IN (${marks(filter.include)})`)
+    conds.push(`COALESCE(j.topic, f.genre) IN (${marks(filter.include)})`)
     params.push(...filter.include)
   }
   if (filter.exclude.length > 0) {
-    conds.push(`f.genre NOT IN (${marks(filter.exclude)})`)
+    conds.push(`COALESCE(j.topic, f.genre) NOT IN (${marks(filter.exclude)})`)
     params.push(...filter.exclude)
   }
-  const where = conds.length > 0 ? `WHERE f.genre IS NULL OR (${conds.join(' AND ')})` : ''
+  const where =
+    conds.length > 0 ? `WHERE COALESCE(j.topic, f.genre) IS NULL OR (${conds.join(' AND ')})` : ''
 
   const { results } = await db
     .prepare(
@@ -121,4 +130,16 @@ export async function saveArticle(db: D1Database, id: number, now: number): Prom
 
 export async function unsaveArticle(db: D1Database, id: number): Promise<void> {
   await db.prepare('DELETE FROM saved WHERE article_id = ?').bind(id).run()
+}
+
+/** Jev に渡す記事の中身。一覧の行は excerpt を持たないので別に引く。 */
+export async function getJudgeTarget(
+  db: D1Database,
+  id: number,
+): Promise<{ id: number; title: string; excerpt: string | null } | undefined> {
+  const row = await db
+    .prepare('SELECT id, title, excerpt FROM articles WHERE id = ?')
+    .bind(id)
+    .first<{ id: number; title: string; excerpt: string | null }>()
+  return row ?? undefined
 }

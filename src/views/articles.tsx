@@ -13,13 +13,43 @@ function isHttpUrl(url: string): boolean {
   return URL.canParse(url) && /^https?:$/u.test(new URL(url).protocol)
 }
 
+const JudgeStatus: FC<{ article: ArticleListItem; note?: 'failed' | 'no_genres' | undefined }> = ({
+  article,
+  note,
+}) => (
+  <>
+    {article.judged_genre === null ? (
+      <button
+        type="button"
+        hx-post={`/articles/${article.id}/judgment`}
+        hx-target="closest li"
+        hx-swap="outerHTML"
+      >
+        判定する
+      </button>
+    ) : (
+      <small>
+        ジャンル: {article.judged_genre}（{Math.round((article.judged_score ?? 0) * 100)}%）
+      </small>
+    )}
+    {note === 'failed' && <small> 判定に失敗しました。時間を置いて再度お試しください。</small>}
+    {note === 'no_genres' && (
+      <small>
+        {' '}
+        ジャンルが未設定です。<a href="/settings/feeds">フィード</a>にジャンルを設定してください。
+      </small>
+    )}
+  </>
+)
+
 /**
  * `inSaved` は保存一覧での表示。取り消したら、行を差し替えずに消す（一覧は「保存した記事だけ」のため）。
  */
-export const ArticleRow: FC<{ article: ArticleListItem; inSaved?: boolean }> = ({
-  article,
-  inSaved,
-}) => (
+export const ArticleRow: FC<{
+  article: ArticleListItem
+  inSaved?: boolean
+  judge?: 'failed' | 'no_genres' | undefined
+}> = ({ article, inSaved, judge }) => (
   <li id={`article-${article.id}`}>
     {isHttpUrl(article.url) ? (
       <a href={article.url} rel="noopener noreferrer">
@@ -54,7 +84,8 @@ export const ArticleRow: FC<{ article: ArticleListItem; inSaved?: boolean }> = (
       >
         ☆ 後で読む
       </button>
-    )}
+    )}{' '}
+    <JudgeStatus article={article} note={judge} />
   </li>
 )
 
