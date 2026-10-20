@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@claude'
 created_date: '2026-10-19 02:55'
-updated_date: '2026-10-20 12:31'
+updated_date: '2026-10-20 13:46'
 labels: []
 dependencies:
   - TASK-21
@@ -32,5 +32,7 @@ ordinal: 17000
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-feeds.judge_each を追加し、クロール後に judge_each=1 のフィードの未判定記事を新しい順に最大 20 件 Jev で判定する（judgePending）。判定失敗は取り込みに影響せず、未判定のまま次周期で再試行。判定結果は既存の COALESCE(j.topic, f.genre) 絞り込みに反映される。フィード行に「記事ごとに判定」チェックを追加。テスト 104 件・lint・typecheck 通過。既知: どのジャンルにも当てはまらない記事は未判定のまま毎周期再試行され上限を消費する（judge.ts に ponytail コメント）。
+feeds.judge_each を追加し、クロール後に judge_each=1 のフィードの未判定記事を新しい順に最大 20 件 Jev で判定する（judgePending）。判定失敗は取り込みに影響せず、未判定のまま次周期で再試行。判定結果は既存の COALESCE(j.topic, f.genre) 絞り込みに反映される。フィード行に「記事ごとに判定」チェックを追加。テスト 104 件・lint・typecheck 通過。
+
+訂正（TASK-31）: 当初「どのジャンルにも当てはまらない記事は未判定のまま毎周期再試行される」と書いたが誤り。実際は「該当なし」の確率を捨てた残りのジャンルの低い確率が保存されて判定済みになり、記事一覧でその中の最大のジャンル（例: tech 0.05）として分類されていた。TASK-31 で「該当なし」も保存するよう修正した（ADR-0015）。
 <!-- SECTION:FINAL_SUMMARY:END -->

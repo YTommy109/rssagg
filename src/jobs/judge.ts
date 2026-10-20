@@ -14,7 +14,8 @@ export type JudgeResult = {
 }
 
 /*
- * ジャンルのどれにも当てはまらないときの選択肢。保存はしない（judgments.topic はジャンルの語彙と共有する）。
+ * ジャンルのどれにも当てはまらないときの選択肢。他のジャンルと同じく確率を保存する（ADR-0015）。
+ * 最大なら記事一覧はこれを記事のジャンルとみなし、include の絞り込みでは隠す。行があるので再判定もしない。
  * ponytail: ユーザーが同名のジャンルを作ると区別できない。問題になったら予約語として入力側で弾く。
  */
 const NONE = '該当なし'
@@ -41,7 +42,7 @@ async function judgeOne(
   })
   const answer = answers['genre']
   if (answer?.type !== 'choice') throw new Error('Jev: choice の答えが返らなかった')
-  return Object.fromEntries(Object.entries(answer.probabilities).filter(([t]) => t !== NONE))
+  return answer.probabilities
 }
 
 /**
@@ -90,10 +91,7 @@ export const JUDGE_LIMIT_PER_CRAWL = 20
 
 /**
  * 「記事ごとに判定する」フィードの未判定の記事を、上限まで判定する（クロールの後段）。
- *
- * 既知の問題: 「該当なし」が最大の記事も、judgeOne が「該当なし」を落とした残りのジャンルの低い確率で
- * 保存されて判定済みになり、記事一覧ではその中の最大のジャンルとして扱われる。保存しないか、
- * 「該当なし」として記録するかは未決。
+ * 「該当なし」と答えた記事も判定済みになり、以後の周期では選ばれない。
  */
 export async function judgePending(
   deps: { db: D1Database; apiKey: string | undefined },
