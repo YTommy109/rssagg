@@ -27,6 +27,6 @@ export default {
   fetch: app.fetch,
   // wrangler.jsonc の triggers.crons（毎時）で起動する。
   async scheduled(_controller, env) {
-    await crawlAll(env.DB, Math.floor(Date.now() / 1000))
+    await crawlAll(env.DB, Math.floor(Date.now() / 1000), env.JEV_API_KEY)
   },
-} satisfies ExportedHandler<Env>
+} satisfies ExportedHandler<AppEnv['Bindings']>

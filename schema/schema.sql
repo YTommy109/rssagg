@@ -10,6 +10,8 @@ CREATE TABLE feeds (
   last_modified TEXT,
   -- ユーザー定義の自由文字列（ADR-0011）。NULL は未設定で、記事一覧の絞り込みの対象外（記事は隠さない）。
   genre TEXT,
+  -- 1 なら、クロール時に新着記事を Jev で判定する（ADR-0011）。複数ジャンルが混ざるサイトや常時判定したいサイト向け。
+  judge_each INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL
 );
 

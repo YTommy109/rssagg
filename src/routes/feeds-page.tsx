@@ -1,7 +1,15 @@
 import { type Context, Hono } from 'hono'
 import type { Child } from 'hono/jsx'
 
-import { deleteFeed, getFeed, insertFeed, listFeeds, listGenres, setFeedGenre } from '../db/feeds'
+import {
+  deleteFeed,
+  getFeed,
+  insertFeed,
+  listFeeds,
+  listGenres,
+  setFeedGenre,
+  setFeedJudgeEach,
+} from '../db/feeds'
 import { findFeedLinks, looksLikeHtml } from '../domain/feed-discover'
 import { feedUrlSchema, genreSchema } from '../domain/feed-input'
 import { decodeFeedBytes, parseFeed } from '../domain/feed-parse'
@@ -110,6 +118,17 @@ export const feedsPageRoute = new Hono<AppEnv>()
       return reject(c, 404, 'このフィードは削除されています。ページを再読み込みしてください。')
     }
     return c.html(<GenreSaved genres={await listGenres(c.env.DB)} />)
+  })
+  // チェックを外すとフォーム値が空で届くので、'on' かどうかだけで決める。
+  .put('/:id/judge-each', async (c) => {
+    const id = rowIdSchema.safeParse(c.req.param('id'))
+    if (!id.success) return c.text('invalid_id', 400)
+    const on = (await c.req.parseBody())['judge_each'] === 'on'
+
+    if (!(await setFeedJudgeEach(c.env.DB, id.data, on))) {
+      return reject(c, 404, 'このフィードは削除されています。ページを再読み込みしてください。')
+    }
+    return c.body(null, 200)
   })
   .post('/:id/fetch', async (c) => {
     const id = rowIdSchema.safeParse(c.req.param('id'))

@@ -143,3 +143,23 @@ export async function getJudgeTarget(
     .first<{ id: number; title: string; excerpt: string | null }>()
   return row ?? undefined
 }
+
+/**
+ * 「記事ごとに判定する」フィードの未判定の記事を、新しい順に limit 件返す。
+ * 判定に失敗した記事も未判定のままなので、次の周期で再び対象になる。
+ */
+export async function listUnjudgedArticles(
+  db: D1Database,
+  limit: number,
+): Promise<{ id: number; title: string; excerpt: string | null }[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT a.id, a.title, a.excerpt FROM articles a JOIN feeds f ON f.id = a.feed_id
+       WHERE f.judge_each = 1
+         AND NOT EXISTS (SELECT 1 FROM judgments j WHERE j.article_id = a.id)
+       ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.id DESC LIMIT ?`,
+    )
+    .bind(limit)
+    .all<{ id: number; title: string; excerpt: string | null }>()
+  return results
+}

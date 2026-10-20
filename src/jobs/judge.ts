@@ -1,4 +1,6 @@
 import { askJev } from '../ai/jev'
+import { listUnjudgedArticles } from '../db/articles'
+import { listGenres } from '../db/feeds'
 import { isJudged, saveJudgments } from '../db/judgments'
 
 /** 判定に渡す記事。本文は持たないので、分類は title と excerpt で行う（docs/jev-measurement.md）。 */
@@ -43,7 +45,7 @@ async function judgeOne(
 }
 
 /**
- * 記事をジャンルで判定し、judgments に保存する。Jev を使う機能（TASK-22〜24）の共通部分。
+ * 記事をジャンルで判定し、judgments に保存する。Jev を使う機能（手動指定・記事ごとの判定・まとめて判定）の共通部分。
  *
  * - API キーかジャンルが無ければ、警告を出して判定を飛ばす（skipped）
  * - 判定済みの記事は再判定しない
@@ -81,4 +83,23 @@ export async function judgeArticles(
   }
   /* oxlint-enable no-await-in-loop */
   return { skipped: false, judged, failed }
+}
+
+/** 1 回のクロールで Jev に渡す記事数の上限。超えた分は次の周期に回る。 */
+export const JUDGE_LIMIT_PER_CRAWL = 20
+
+/**
+ * 「記事ごとに判定する」フィードの未判定の記事を、上限まで判定する（クロールの後段）。
+ *
+ * 既知の問題: 「該当なし」が最大の記事も、judgeOne が「該当なし」を落とした残りのジャンルの低い確率で
+ * 保存されて判定済みになり、記事一覧ではその中の最大のジャンルとして扱われる。保存しないか、
+ * 「該当なし」として記録するかは未決。
+ */
+export async function judgePending(
+  deps: { db: D1Database; apiKey: string | undefined },
+  now: number,
+): Promise<JudgeResult> {
+  const articles = await listUnjudgedArticles(deps.db, JUDGE_LIMIT_PER_CRAWL)
+  if (articles.length === 0) return { skipped: false, judged: [], failed: [] }
+  return judgeArticles(deps, { articles, genres: await listGenres(deps.db), now })
 }
