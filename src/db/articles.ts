@@ -145,21 +145,39 @@ export async function getJudgeTarget(
 }
 
 /**
- * 「記事ごとに判定する」フィードの未判定の記事を、新しい順に limit 件返す。
- * 判定に失敗した記事も未判定のままなので、次の周期で再び対象になる。
+ * 「記事ごとに判定する」フィードの未判定の記事を、取り込んだ順（古い順）に limit 件返す。
+ * 新しい順だと、流入が limit を超え続けたときに古い記事へ届かない。
+ *
+ * 判定に失敗した記事は、最後の失敗から 1 時間 × 2^(失敗回数 - 1)（上限 64 時間）経つまで選ばない。
+ * 毎回失敗する記事が枠を占め続けたり、Jev を毎時呼び続けたりしないため。
  */
 export async function listUnjudgedArticles(
   db: D1Database,
   limit: number,
+  now: number,
 ): Promise<{ id: number; title: string; excerpt: string | null }[]> {
   const { results } = await db
     .prepare(
       `SELECT a.id, a.title, a.excerpt FROM articles a JOIN feeds f ON f.id = a.feed_id
        WHERE f.judge_each = 1
          AND NOT EXISTS (SELECT 1 FROM judgments j WHERE j.article_id = a.id)
-       ORDER BY COALESCE(a.published_at, a.fetched_at) DESC, a.id DESC LIMIT ?`,
+         AND (a.judge_failures = 0 OR a.judge_failed_at + (3600 << min(a.judge_failures - 1, 6)) <= ?)
+       ORDER BY a.id LIMIT ?`,
     )
-    .bind(limit)
+    .bind(now, limit)
     .all<{ id: number; title: string; excerpt: string | null }>()
   return results
+}
+
+/** クロール後の判定に失敗した記事の失敗回数を 1 増やし、失敗時刻を記録する。 */
+export async function recordJudgeFailures(
+  db: D1Database,
+  ids: number[],
+  now: number,
+): Promise<void> {
+  if (ids.length === 0) return
+  const stmt = db.prepare(
+    'UPDATE articles SET judge_failures = judge_failures + 1, judge_failed_at = ? WHERE id = ?',
+  )
+  await db.batch(ids.map((id) => stmt.bind(now, id)))
 }

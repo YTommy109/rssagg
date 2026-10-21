@@ -28,13 +28,15 @@ const jevOk = (probabilities: Record<string, number> = TECH) =>
 const RSS = `<?xml version="1.0"?><rss version="2.0"><channel><title>Blog</title>
 <item><title>新着</title><link>https://a.test/new</link><guid>gnew</guid></item></channel></rss>`
 
-/** Jev の呼び出し先とそれ以外（フィード取得）を振り分ける。 */
-function mockFetch(jev: () => Response) {
-  return vi.spyOn(globalThis, 'fetch').mockImplementation((input) => {
-    const url = new Request(input).url
-    return Promise.resolve(url.includes('api.typesafe.ai') ? jev() : new Response(RSS))
+/** Jev の呼び出し先とそれ以外（フィード取得）を振り分ける。jev にはリクエスト本文を渡す。 */
+function mockFetch(jev: (body: string) => Response) {
+  return vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+    const req = new Request(input, init)
+    return req.url.includes('api.typesafe.ai') ? jev(await req.text()) : new Response(RSS)
   })
 }
+
+const HOUR = 3600
 
 const judgedIds = async () =>
   (
@@ -63,7 +65,7 @@ describe('記事ごとの判定（クロール時）', () => {
   })
 
   it('設定したフィードの記事だけを判定し、結果は一覧の絞り込みに使われる行として残る', async () => {
-    const fetchMock = mockFetch(jevOk)
+    const fetchMock = mockFetch(() => jevOk())
     await judgePending({ db: env.DB, apiKey: 'k' }, NOW)
     expect(await judgedIds()).toStrictEqual([1])
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -84,16 +86,19 @@ describe('記事ごとの判定（クロール時）', () => {
       ).bind(`x${i}`, `https://a.test/x${i}`, `X${i}`),
     )
     await env.DB.batch(extra)
-    const fetchMock = mockFetch(jevOk)
+    const fetchMock = mockFetch(() => jevOk())
 
     await judgePending({ db: env.DB, apiKey: 'k' }, NOW)
     expect(fetchMock).toHaveBeenCalledTimes(JUDGE_LIMIT_PER_CRAWL)
+    // 取り込んだ順（id 1, 3, 4, ...）に選ぶ。流入が上限を超え続けても、古い記事が取り残されない。
+    const oldest = Array.from({ length: JUDGE_LIMIT_PER_CRAWL - 1 }, (_, i) => i + 3)
+    expect(await judgedIds()).toStrictEqual([1, ...oldest])
     await judgePending({ db: env.DB, apiKey: 'k' }, NOW)
     // 2 周期で全 26 件（既存の A を含む）が判定済みになる。
     expect(await judgedIds()).toHaveLength(JUDGE_LIMIT_PER_CRAWL + 5 + 1)
   })
 
-  it('判定が失敗しても取り込みは止まらず、記事は未判定のまま次の周期で再試行できる', async () => {
+  it('判定が失敗しても取り込みは止まらず、記事は未判定のまま間隔を空けて再試行される', async () => {
     mockFetch(() => new Response('boom', { status: 500 }))
     const { failed } = await crawlAll(env.DB, NOW, 'k')
     expect(failed).toStrictEqual([])
@@ -101,9 +106,55 @@ describe('記事ごとの判定（クロール時）', () => {
     expect(row).not.toBeNull()
     expect(await judgedIds()).toStrictEqual([])
 
-    mockFetch(jevOk)
-    await crawlAll(env.DB, NOW, 'k')
+    // 失敗から 1 時間経つまでは選ばれない。
+    mockFetch(() => jevOk())
+    await crawlAll(env.DB, NOW + HOUR - 1, 'k')
+    expect(await judgedIds()).toStrictEqual([])
+    await crawlAll(env.DB, NOW + HOUR, 'k')
     expect(await judgedIds()).toContain(1)
+  })
+
+  it('毎回失敗する記事があっても他の記事は判定され、失敗した記事への呼び出しは間隔が延びていく', async () => {
+    let badCalls = 0
+    const fetchMock = mockFetch((body) => {
+      if (!body.includes('"BAD"')) return jevOk()
+      badCalls += 1
+      return new Response('bad request', { status: 400 })
+    })
+    await env.DB.prepare(
+      "INSERT INTO articles (id, feed_id, guid, url, title, fetched_at) VALUES (3, 1, 'g3', 'https://a.test/3', 'BAD', 100)",
+    ).run()
+    const addArticle = (id: number) =>
+      env.DB.prepare(
+        "INSERT INTO articles (id, feed_id, guid, url, title, fetched_at) VALUES (?, 1, ?, ?, 'OK', 100)",
+      )
+        .bind(id, `g${id}`, `https://a.test/${id}`)
+        .run()
+    const run = async (at: number) => (await judgePending({ db: env.DB, apiKey: 'k' }, at)).failed
+
+    expect(await run(NOW)).toStrictEqual([3])
+    expect(await judgedIds()).toStrictEqual([1])
+
+    // 1 回失敗: 1 時間は選ばれず、その間に入った記事は判定される。
+    await addArticle(4)
+    expect(await run(NOW + HOUR - 1)).toStrictEqual([])
+    expect(await judgedIds()).toStrictEqual([1, 4])
+    expect(await run(NOW + HOUR)).toStrictEqual([3])
+
+    // 2 回失敗: 次は 2 時間空く。
+    expect(await run(NOW + HOUR * 3 - 1)).toStrictEqual([])
+    expect(await run(NOW + HOUR * 3)).toStrictEqual([3])
+    expect(badCalls).toBe(3)
+
+    // 間隔は 64 時間で頭打ちになり、記事は選択に戻り続ける。
+    await env.DB.prepare(
+      'UPDATE articles SET judge_failures = 20, judge_failed_at = ? WHERE id = 3',
+    )
+      .bind(NOW)
+      .run()
+    expect(await run(NOW + HOUR * 64 - 1)).toStrictEqual([])
+    expect(await run(NOW + HOUR * 64)).toStrictEqual([3])
+    expect(fetchMock).toHaveBeenCalledTimes(badCalls + 2)
   })
 
   it('画面から「記事ごとに判定」を設定・解除できる', async () => {

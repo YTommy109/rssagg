@@ -1,5 +1,5 @@
 import { askJev } from '../ai/jev'
-import { listUnjudgedArticles } from '../db/articles'
+import { listUnjudgedArticles, recordJudgeFailures } from '../db/articles'
 import { listGenres } from '../db/feeds'
 import { isJudged, saveJudgments } from '../db/judgments'
 
@@ -92,12 +92,15 @@ export const JUDGE_LIMIT_PER_CRAWL = 20
 /**
  * 「記事ごとに判定する」フィードの未判定の記事を、上限まで判定する（クロールの後段）。
  * 「該当なし」と答えた記事も判定済みになり、以後の周期では選ばれない。
+ * 失敗した記事は記録し、間隔を空けてから再び選ぶ（listUnjudgedArticles）。
  */
 export async function judgePending(
   deps: { db: D1Database; apiKey: string | undefined },
   now: number,
 ): Promise<JudgeResult> {
-  const articles = await listUnjudgedArticles(deps.db, JUDGE_LIMIT_PER_CRAWL)
+  const articles = await listUnjudgedArticles(deps.db, JUDGE_LIMIT_PER_CRAWL, now)
   if (articles.length === 0) return { skipped: false, judged: [], failed: [] }
-  return judgeArticles(deps, { articles, genres: await listGenres(deps.db), now })
+  const result = await judgeArticles(deps, { articles, genres: await listGenres(deps.db), now })
+  await recordJudgeFailures(deps.db, result.failed, now)
+  return result
 }
